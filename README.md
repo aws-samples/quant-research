@@ -35,6 +35,14 @@ Once the virtualenv is activated, you can install the required dependencies.
 $ pip install -r requirements.txt
 ```
 
+Build custom docker image and push it to ECR repository, specify your aws-account-id and region where you deploying the solution as parameters 
+
+```
+$ cd adx/docker
+$ bash ./build.sh <AWS_ACCOUNT_ID> <REGION>  
+$ cd ../../
+```
+
 Bootstrap CDK for your account and region
 
 ```
@@ -47,4 +55,3 @@ At this point you can now deploy the CloudFormation template for this code.
 $ cdk deploy
 ```
 
-Once your deployment is finished (takes approximately 40-60 minutes)

@@ -59,7 +59,7 @@ as a master role in EKS.
 Existing default policy only grants access to `maystreet` S3 bucket. 
 
 3. Create a user in IAM Security center (https://docs.aws.amazon.com/singlesignon/latest/userguide/addusers.html) and set it  
-as `identity_name`(adx/adx_stack.py L102).  
+as `identity_name` (adx/adx_stack.py L102).  
 
 
 At this point you can now deploy the CloudFormation template for this code.
@@ -69,3 +69,10 @@ $ cdk deploy
 ```
 
 
+FAQ
+
+Q: How do i change the EMR on EKS version for EMR Studio Notebooks ? 
+
+A: You specify the EMR on EKS base image including the version in your `adx/docker/Dockerfile`. This CDK template is built using v6.7. 
+Once you've changed the version you need to rebuild the image and push it to the repository - use `adx/docker/build.sh` script provided.
+Finally, you need to reference your published image in the EMR Managed Endpoint configuration (adx/adx_stack.py L139)

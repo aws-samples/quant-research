@@ -56,7 +56,7 @@ Usually you would use different IAM Role to run your CDK deployment, so when new
 as a master role in EKS. 
 
 2. Change `MyPolicy1` (adx/adx_stack.py L78) IAM policy to configure access to data and other AWS services your EMR Studio notebook is able to connect to.
-Existing default plicy only grants access to `maystreet` S3 bucket. 
+Existing default policy only grants access to `maystreet` S3 bucket. 
 
 3. Create a user in IAM Security center (https://docs.aws.amazon.com/singlesignon/latest/userguide/addusers.html) and set it  
 as `identity_name`(adx/adx_stack.py L102).  

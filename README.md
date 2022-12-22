@@ -71,8 +71,7 @@ $ cdk deploy
 Once deployment successfully finished you should see EKS Cluster, EMR Virtual Cluster, EMR Managed Endpoint and EMR Studio provisioned in your account.
 IN orer to start using EMR Studio you will need to create a workspace (https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-studio-configure-workspace.html) and assign it 
 to managed endpoint that has been provisioned. 
-
-
+ 
 
 FAQ
 

@@ -62,11 +62,16 @@ Existing default policy only grants access to `maystreet` S3 bucket.
 as `identity_name` (adx/adx_stack.py L102).  
 
 
-At this point you can now deploy the CloudFormation template for this code.
+At this point you can now deploy the CloudFormation template for this code. Deployment typically takes 40-60 minutes.
 
 ```
 $ cdk deploy
 ```
+
+Once deployment successfully finished you should see EKS Cluster, EMR Virtual Cluster, EMR Managed Endpoint and EMR Studio provisioned in your account.
+IN orer to start using EMR Studio you will need to create a workspace (https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-studio-configure-workspace.html) and assign it 
+to managed endpoint that has been provisioned. 
+
 
 
 FAQ

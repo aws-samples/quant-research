@@ -1,4 +1,17 @@
 import json
+#TODO goal: readme shoud have only few instructions: a/deploy stack b/configuration options.
+# we also cant rely on command line and its environment. hence we used cloud9 and its predictable and consistent
+# underlying ec2 to avoid dependecy on unknown customer environment.
+#TODO need multiple stacks, will refine together but so far i see:
+# a/EKS (includes docker)
+# b/EMR (IAM/roles and EMR specific ....) - reuse the existing ref architecture
+# c/secrets (values are dummy vals)
+# d/pipeline (i.e. notebooks, my own prop libraries and codeCommit)
+# e/app config => to maintain configrations for ADX for S3 access
+#       (needs to be investigated with ADX what it takes; appconfig service)
+# f/environment (VPC/Security/SG; IMA/Roles - if shared across the project,
+#       otherwise next to the resource)
+
 
 from aws_cdk import (
     Stack,

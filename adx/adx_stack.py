@@ -1,4 +1,17 @@
 import json
+
+#TODO functional issues to solve for:
+#    interaction: spark-submit and interactive sessions
+# how deploy/update 3rd party dependencies
+# how deploy/update proprietary libraries (without publishing to external repos, i.e. pypi)
+# use the stack to deploy one large centralized cluster or allow each researcher to have 1+ own clusters
+# the very first deploy should run from AWS controlled environment (cloud9 as an option) and fully automated
+# after the first deploy I (as a user) need to know userid/pwd to login into Notebooks, preferably created automatically
+# package my interactive work into scheduled jobs, do it at scale and in "enterprise way"
+# ability to update my stack with new ADX vendor onboarding for no-copy access
+# have the entire system self-documented, parameterized and refrenceable (i.e. stack writes into param store)
+# VPC?? => option to specify my own or take AWS generated one
+
 #TODO goal: readme shoud have only few instructions: a/deploy stack b/configuration options.
 # we also cant rely on command line and its environment. hence we used cloud9 and its predictable and consistent
 # underlying ec2 to avoid dependecy on unknown customer environment.
@@ -11,7 +24,6 @@ import json
 #       (needs to be investigated with ADX what it takes; appconfig service)
 # f/environment (VPC/Security/SG; IMA/Roles - if shared across the project,
 #       otherwise next to the resource)
-
 
 from aws_cdk import (
     Stack,

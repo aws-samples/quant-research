@@ -1,5 +1,6 @@
 import json
-#TODO: bootstrapped account to east-1 but stack pushed into east-2
+#TODO: bootstrapped account to east-1 but stack pushed into east-2, fixed by hardcoding into app.py
+#TODO: IAM security center is regional construct. If it is enabled in one region, second region can not have it, but stack would not deploy without it
 #TODO functional issues to solve for:
 #    interaction: spark-submit and interactive sessions
 # yhow deploy/update 3rd party dependencies

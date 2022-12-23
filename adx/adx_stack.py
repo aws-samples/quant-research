@@ -1,8 +1,8 @@
 import json
-
+#TODO: bootstrapped account to east-1 but stack pushed into east-2
 #TODO functional issues to solve for:
 #    interaction: spark-submit and interactive sessions
-# how deploy/update 3rd party dependencies
+# yhow deploy/update 3rd party dependencies
 # how deploy/update proprietary libraries (without publishing to external repos, i.e. pypi)
 # use the stack to deploy one large centralized cluster or allow each researcher to have 1+ own clusters
 # the very first deploy should run from AWS controlled environment (cloud9 as an option) and fully automated

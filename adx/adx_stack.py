@@ -1,4 +1,9 @@
 import json
+
+#TODO: we need to add codecommit to the stack (create  one new unless existing one(s)[multiple ok] are supplied) and link it in the studio,
+# so when you open notebook it is already linked (if possible). if linking is not possible (i.e. not API) - lets discuss
+#TODO: we need to create a workspace for user to start his work in and link it to the cluster and endpoint that cdk creates
+#TODO: we need to automate SSOIdentity creation instead of instructions in the readme
 #TODO: bootstrapped account to east-1 but stack pushed into east-2, fixed by hardcoding into app.py
 #TODO: IAM security center is regional construct. If it is enabled in one region, second region can not have it, but stack would not deploy without it
 #TODO functional issues to solve for:

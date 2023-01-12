@@ -1,3 +1,0 @@
-aws-cdk-lib==2.35.0
-constructs>=10.0.0,<11.0.0
-aws_analytics_reference_architecture>=2.0.0

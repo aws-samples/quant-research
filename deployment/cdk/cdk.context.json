@@ -40,7 +40,7 @@
   },
   "cdk-project": "adx",
   "project=adx": {
-    "eks-role-arn": "arn:aws:iam::444975673530:role/Admin",
+    "eks-role-arn": "arn:aws:iam::614393260192:role/fdp",
     "emrstudio": [
       {
         "managed-endpoints": [
@@ -65,7 +65,7 @@
                     "s3:ListBucket"
                   ],
                   "Resource": [
-                    "arn:aws:s3:::maystreet"
+                    "arn:aws:s3:::maystreetdata"
                   ]
                 },
                 {
@@ -76,7 +76,7 @@
                     "s3:DeleteObject"
                   ],
                   "Resource": [
-                    "arn:aws:s3:::maystreet/*"
+                    "arn:aws:s3:::maystreetdata/*"
                   ]
                 }
               ]

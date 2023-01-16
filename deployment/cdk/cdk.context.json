@@ -46,7 +46,7 @@
         "managed-endpoints": [
           {
             "endpoint-name": "managed-endpoint-1",
-            "emr-version": "emr-6.8.0-latest",
+            "emr-version": "emr-6.9.0-latest",
             "docker-file": "Dockerfile",
             "spark-driver-instance-types": [
               "m5.xlarge",
@@ -65,7 +65,8 @@
                     "s3:ListBucket"
                   ],
                   "Resource": [
-                    "arn:aws:s3:::maystreetdata"
+                    "arn:aws:s3:::maystreetdata",
+                    "arn:aws:s3:::fsidatalake"
                   ]
                 },
                 {
@@ -74,9 +75,10 @@
                     "s3:PutObject",
                     "s3:GetObject",
                     "s3:DeleteObject"
-                  ],
+                  ], 
                   "Resource": [
-                    "arn:aws:s3:::maystreetdata/*"
+                    "arn:aws:s3:::maystreetdata/*",
+                    "arn:aws:s3:::fsidatalake/*"
                   ]
                 }
               ]

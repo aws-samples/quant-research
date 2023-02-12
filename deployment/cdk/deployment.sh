@@ -1,7 +1,7 @@
 #!/bin/sh
 
 if [[ $# -ne 2 ]]; then
-    echo "usage: bash build.sh AWS_ACCOUNT_ID REGION"
+    echo "usage: bash deployment.sh AWS_ACCOUNT_ID REGION"
     exit
 fi
 

@@ -92,7 +92,10 @@ export class EmrEksStack extends Stack {
                }),
             ],
             actions: [
-              'logs:*',
+              'logs:GetLogEvents',
+              'logs:PutLogEvents',
+              'logs:PutRetentionPolicy',
+              'logs:CreateLogGroup'
             ],
           })]
         });

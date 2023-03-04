@@ -3,9 +3,11 @@ import { Construct } from 'constructs';
 import { DockerImageAsset } from 'aws-cdk-lib/aws-ecr-assets';
 import * as path from 'path';
 import { Repository, Code } from 'aws-cdk-lib/aws-codecommit';
-import { CfnOutput } from 'aws-cdk-lib';
+import { CfnOutput, SecretValue } from 'aws-cdk-lib';
 import { User } from 'aws-cdk-lib/aws-iam';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
+import { Secret, SecretStringValueBeta1 } from 'aws-cdk-lib/aws-secretsmanager';
+
 import { AwsCustomResource, PhysicalResourceId, PhysicalResourceIdReference, AwsCustomResourcePolicy } from 'aws-cdk-lib/custom-resources';
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
 
@@ -57,17 +59,19 @@ export class CodeCommitStack extends cdk.Stack {
       }),
     });
 
-
-    const ssmPrefix = `${project}-codecommit-`;
-    this._addToSSM(`${ssmPrefix}repository-url`, repo.repositoryCloneUrlHttp, 'codecommit repository url');
-    this._addToSSM(`${ssmPrefix}repository-username`, codeCommitAccess.getResponseField("ServiceSpecificCredential.ServiceUserName"), 'codecommit repository username');
-    this._addToSSM(`${ssmPrefix}repository-password`, codeCommitAccess.getResponseField("ServiceSpecificCredential.ServicePassword"), 'codecommit repository password');
+    const secret = new Secret(this, 'Secret', {
+      secretName:`${project}-codecommit-${props!.env!.region}`,
+      secretObjectValue: {
+        repository: SecretValue.unsafePlainText(repo.repositoryCloneUrlHttp),
+        username: SecretValue.unsafePlainText(codeCommitAccess.getResponseField("ServiceSpecificCredential.ServiceUserName")),
+        password: SecretValue.unsafePlainText(codeCommitAccess.getResponseField("ServiceSpecificCredential.ServicePassword"))
+      },
+    })
+;
     
     this.iamUserName = userName;
     
-    new CfnOutput(this, 'CodeCommitParameterStorePrefix', {value: `${ssmPrefix}`});
-    new CfnOutput(this, 'CodeCommitRepository', { value: repo.repositoryCloneUrlHttp });
-  
+    new CfnOutput(this, 'CodeCommitSecretsManagerName', {value: secret.secretName});
   }
   
   private _addToSSM(pname:string, pvalue:string, pdesc?:string):void{

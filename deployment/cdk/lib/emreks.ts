@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
 import { EmrEksCluster, NotebookPlatform, StudioAuthMode, SSOIdentityType, NotebookManagedEndpointOptions, Autoscaler } from 'aws-analytics-reference-architecture';
-import { NodegroupAmiType, TaintEffect, CapacityType } from 'aws-cdk-lib/aws-eks';
+import { NodegroupAmiType, TaintEffect, CapacityType, KubernetesVersion } from 'aws-cdk-lib/aws-eks';
 import { InstanceType } from 'aws-cdk-lib/aws-ec2';
 import { ManagedPolicy, PolicyDocument, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Stack, ArnFormat, Aws,StackProps } from 'aws-cdk-lib';
@@ -32,7 +32,8 @@ export class EmrEksStack extends Stack {
       eksAdminRoleArn: projectSettings["eks-role-arn"], 
       eksClusterName: clusterName, 
       autoscaling:Autoscaler.CLUSTER_AUTOSCALER,
-      defaultNodes: false
+      defaultNodes: false,
+      kubernetesVersion:KubernetesVersion.V1_22
     });
     
     //EMR Studio workspace - 1 per project

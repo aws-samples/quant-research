@@ -20,7 +20,7 @@
     "typescript": "~3.9.7"
   },
   "dependencies": {
-    "aws-analytics-reference-architecture": "^2.7.0",
+    "aws-analytics-reference-architecture": "2.8.6",
     "aws-cdk-lib": "2.51.0",
     "cdk-nag": "^2.22.5",
     "constructs": "^10.0.0",

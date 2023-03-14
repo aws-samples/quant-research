@@ -40,21 +40,20 @@
   },
   "cdk-project": "adx",
   "project=adx": {
-    "eks-role-arn": "arn:aws:iam::614393260192:role/fdp",
+    "eks-role-arn": "arn:aws:iam::444975673530:role/Admin",
     "emrstudio": [
       {
         "managed-endpoints": [
           {
-            "endpoint-name": "managed-endpoint-1",
+            "endpoint-name": "managed-endpoint-2",
             "emr-version": "emr-6.9.0-latest",
             "docker-file": "Dockerfile",
             "spark-driver-instance-types": [
-              "m5.xlarge",
-              "c5.xlarge"
+              "m5.2xlarge"
             ],
             "spark-executor-instance-types": [
-              "m5.4xlarge",
-              "c5.4xlarge"
+              "c5.4xlarge",
+              "m5.2xlarge"
             ],
             "iam-policy": {
               "Version": "2012-10-17",

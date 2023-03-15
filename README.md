@@ -27,7 +27,7 @@ $ bash ./deployment.sh <ACCOUNT_ID> <REGION>
 4. Once deployment successfully finished you should see EKS Cluster, EMR Virtual Cluster, EMR Managed Endpoint and EMR Studio provisioned in your account.
 IN orer to start using EMR Studio you will need to create a workspace (https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-studio-configure-workspace.html) and assign it 
 to managed endpoint that has been provisioned. 
-There's also codecommit repository setup which access details stored in AWS Systems Manager Parameters Store - `<PROJECT>-codecommit-repository-url`, `<PROJECT>-codecommit-repository-username`, `<PROJECT>-codecommit-repository-password`.
+There's also codecommit repository setup which access credentials stored in AWS Secrets Manager using `<PROJECT>-codecommit-<REGION>`` as secret name.
 We recommend linking this repository to your EMR Studio Workspace (https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-studio-git-repo.html)
 
 

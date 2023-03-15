@@ -3,7 +3,9 @@ import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import { EmrEksStack } from '../lib/emreks';
 import { DockerBuildStack } from '../lib/dockerbuild';
-import { CodeCommitStack } from '../lib/comecommit';
+import { CodeCommitStack } from '../lib/codecommit';
+
+
 
 
 const app = new cdk.App();

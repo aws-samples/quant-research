@@ -3,7 +3,7 @@ import { EmrEksCluster, NotebookPlatform, StudioAuthMode, SSOIdentityType, Noteb
 import { NodegroupAmiType, TaintEffect, CapacityType, KubernetesVersion } from 'aws-cdk-lib/aws-eks';
 import { InstanceType } from 'aws-cdk-lib/aws-ec2';
 import { ManagedPolicy, PolicyDocument, PolicyStatement } from 'aws-cdk-lib/aws-iam';
-import { Stack, ArnFormat, Aws,StackProps } from 'aws-cdk-lib';
+import { Stack, ArnFormat, Aws,StackProps, Size } from 'aws-cdk-lib';
 import * as ManagedEndpointConfig from './resources/managed-endpoint.json';
 import * as path from 'path';
 import { DockerImageAsset } from 'aws-cdk-lib/aws-ecr-assets';
@@ -62,6 +62,7 @@ export class EmrEksStack extends Stack {
           instanceTypes: managedEnpoint["spark-driver-instance-types"].map((el:string)=> new InstanceType(el)) as InstanceType[],
           minSize:1,
           maxSize:10,
+          diskSize:100,
           labels:{'role': `${endpointName}-notebook`,'spark-role': 'driver','node-lifecycle': 'on-demand'},
           //taints:[{'key': 'role', 'value': `${endpointName}-notebook`, 'effect': TaintEffect.NO_SCHEDULE}]
         });
@@ -73,6 +74,7 @@ export class EmrEksStack extends Stack {
           instanceTypes: managedEnpoint["spark-executor-instance-types"].map((el:string)=> new InstanceType(el)) as InstanceType[],
           minSize:1,
           maxSize:100,
+          diskSize:100,
           capacityType: CapacityType.SPOT,
           labels:{'role': `${endpointName}-notebook`,'spark-role': 'executor','node-lifecycle': 'spot'},
           //taints:[{'key': 'role', 'value': `${endpointName}-notebook`, 'effect': TaintEffect.NO_SCHEDULE}]

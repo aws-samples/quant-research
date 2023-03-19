@@ -19,7 +19,7 @@ export class DockerBuildStack extends cdk.Stack {
         const emrVersion = managedEnpoint["emr-version"];
         
         //replace the image release format with container tag format emr-6.8.0-latest to emr-6.8.0:latest
-        const containerImage = emrVersion.replace(/^(emr-\d\.\d\.\d)-(\w+)$/, "$1:$2") 
+        const containerImage = emrVersion.replace(/^(emr-\d+\.\d+\.\d+)-(\w+)$/, "$1:$2") 
         
         const region = (props && props.env && props.env.region) ?  props.env.region : "us-east-1";
         if (dockerFile){

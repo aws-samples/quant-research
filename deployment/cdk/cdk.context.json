@@ -48,13 +48,6 @@
             "endpoint-name": "managed-endpoint-1",
             "emr-version": "emr-6.9.0-latest",
             "docker-file": "Dockerfile",
-            "mount-nvme": true,
-            "spark-driver-instance-types": [
-              "m6id.2xlarge"
-            ],
-            "spark-executor-instance-types": [
-              "m6id.2xlarge"
-            ],
             "iam-policy": {
               "Version": "2012-10-17",
               "Statement": [
@@ -107,5 +100,10 @@
   "availability-zones:account=444975673530:region=us-west-1": [
     "us-west-1a",
     "us-west-1b"
+  ],
+  "availability-zones:account=444975673530:region=eu-west-1": [
+    "eu-west-1a",
+    "eu-west-1b",
+    "eu-west-1c"
   ]
 }

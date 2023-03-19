@@ -77,6 +77,11 @@ spec:
     kubernetes.io/cluster/{{cluster-name}}: owned
   tags:
     KarpenerProvisionerName: "notebook-driver"
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 100Gi
+        volumeType: gp2
   userData: |
     MIME-Version: 1.0
     Content-Type: multipart/mixed; boundary="BOUNDARY"

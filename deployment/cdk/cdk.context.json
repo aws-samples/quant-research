@@ -45,15 +45,15 @@
       {
         "managed-endpoints": [
           {
-            "endpoint-name": "managed-endpoint-2",
+            "endpoint-name": "managed-endpoint-1",
             "emr-version": "emr-6.9.0-latest",
             "docker-file": "Dockerfile",
+            "mount-nvme": true,
             "spark-driver-instance-types": [
-              "m5.2xlarge"
+              "m6id.2xlarge"
             ],
             "spark-executor-instance-types": [
-              "c5.4xlarge",
-              "m5.2xlarge"
+              "m6id.2xlarge"
             ],
             "iam-policy": {
               "Version": "2012-10-17",
@@ -74,7 +74,7 @@
                     "s3:PutObject",
                     "s3:GetObject",
                     "s3:DeleteObject"
-                  ], 
+                  ],
                   "Resource": [
                     "arn:aws:s3:::maystreetdata/*",
                     "arn:aws:s3:::fsidatalake/*"
@@ -103,5 +103,9 @@
     "us-east-2a",
     "us-east-2b",
     "us-east-2c"
+  ],
+  "availability-zones:account=444975673530:region=us-west-1": [
+    "us-west-1a",
+    "us-west-1b"
   ]
 }

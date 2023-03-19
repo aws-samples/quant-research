@@ -1,5 +1,5 @@
 import { Construct } from 'constructs';
-import { EmrEksCluster, NotebookPlatform, StudioAuthMode, SSOIdentityType, NotebookManagedEndpointOptions, Autoscaler } from 'aws-analytics-reference-architecture';
+import { EmrEksCluster, NotebookPlatform, StudioAuthMode, SSOIdentityType, NotebookManagedEndpointOptions, Autoscaler, SingletonCfnLaunchTemplate } from 'aws-analytics-reference-architecture';
 import { NodegroupAmiType, TaintEffect, CapacityType, KubernetesVersion } from 'aws-cdk-lib/aws-eks';
 import { InstanceType } from 'aws-cdk-lib/aws-ec2';
 import { ManagedPolicy, PolicyDocument, PolicyStatement } from 'aws-cdk-lib/aws-iam';
@@ -44,6 +44,7 @@ export class EmrEksStack extends Stack {
       studioAuthMode:StudioAuthMode.IAM
     });
 
+
     // workspace can be linked to muiltiple users
     for ( let emrstudio of projectSettings["emrstudio"]){
       
@@ -62,7 +63,7 @@ export class EmrEksStack extends Stack {
           instanceTypes: managedEnpoint["spark-driver-instance-types"].map((el:string)=> new InstanceType(el)) as InstanceType[],
           minSize:1,
           maxSize:10,
-          diskSize:100,
+          mountNvme:managedEnpoint["mount-nvme"] || false,
           labels:{'role': `${endpointName}-notebook`,'spark-role': 'driver','node-lifecycle': 'on-demand'},
           //taints:[{'key': 'role', 'value': `${endpointName}-notebook`, 'effect': TaintEffect.NO_SCHEDULE}]
         });
@@ -74,7 +75,7 @@ export class EmrEksStack extends Stack {
           instanceTypes: managedEnpoint["spark-executor-instance-types"].map((el:string)=> new InstanceType(el)) as InstanceType[],
           minSize:1,
           maxSize:100,
-          diskSize:100,
+          mountNvme:managedEnpoint["mount-nvme"] || false,
           capacityType: CapacityType.SPOT,
           labels:{'role': `${endpointName}-notebook`,'spark-role': 'executor','node-lifecycle': 'spot'},
           //taints:[{'key': 'role', 'value': `${endpointName}-notebook`, 'effect': TaintEffect.NO_SCHEDULE}]

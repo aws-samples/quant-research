@@ -112,10 +112,11 @@ export class EmrEksStack extends Stack {
                }),
             ],
             actions: [
-              'logs:GetLogEvents',
-              'logs:PutLogEvents',
-              'logs:PutRetentionPolicy',
-              'logs:CreateLogGroup'
+            'logs:CreateLogGroup',
+            'logs:PutLogEvents',
+            'logs:CreateLogStream',
+            'logs:DescribeLogGroups',
+            'logs:DescribeLogStreams'
             ],
           })]
         });

@@ -1,6 +1,6 @@
 {
   "name": "cdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "bin": {
     "cdk": "bin/cdk.js"
   },
@@ -20,10 +20,10 @@
     "typescript": "~3.9.7"
   },
   "dependencies": {
-    "aws-analytics-reference-architecture": "2.8.6",
-    "aws-cdk-lib": "2.51.0",
+    "aws-analytics-reference-architecture": "2.9.9",
+    "aws-cdk-lib": "2.72.1",
     "cdk-nag": "^2.22.5",
-    "constructs": "^10.0.0",
+    "constructs": "^10.1.308",
     "source-map-support": "^0.5.21"
   }
 }

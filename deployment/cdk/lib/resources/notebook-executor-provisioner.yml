@@ -28,7 +28,7 @@ spec:
       values: ["amd64"]
     # Exclude smaller instance sizes
     - key: "karpenter.k8s.aws/instance-size"
-      operator: NotIn
+      operator: In
       values: [2xlarge,4xlarge,8xlarge]
     - key: "karpenter.sh/capacity-type" # If not included, the webhook for the AWS cloud provider will default to on-demand
       operator: In

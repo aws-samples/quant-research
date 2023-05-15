@@ -20,8 +20,9 @@
     "typescript": "~3.9.7"
   },
   "dependencies": {
-    "aws-analytics-reference-architecture": "2.9.9",
+    "aws-analytics-reference-architecture": "2.9.14",
     "aws-cdk-lib": "2.72.1",
+    "@aws-cdk/lambda-layer-kubectl-v23":"^2.0.0",
     "cdk-nag": "^2.22.5",
     "constructs": "^10.1.308",
     "source-map-support": "^0.5.21"

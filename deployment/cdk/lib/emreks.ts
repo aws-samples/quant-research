@@ -1,7 +1,9 @@
 import { Construct } from 'constructs';
 import { EmrEksCluster, NotebookPlatform, StudioAuthMode, SSOIdentityType, NotebookManagedEndpointOptions, Autoscaler, SingletonCfnLaunchTemplate } from 'aws-analytics-reference-architecture';
+import { karpenterManifestSetup } from 'aws-analytics-reference-architecture/lib/emr-eks-platform/emr-eks-cluster-helpers';
 import { NodegroupAmiType, TaintEffect, CapacityType, KubernetesVersion } from 'aws-cdk-lib/aws-eks';
-import { InstanceType } from 'aws-cdk-lib/aws-ec2';
+import { InstanceType, SubnetType } from 'aws-cdk-lib/aws-ec2';
+import { KubectlV23Layer } from '@aws-cdk/lambda-layer-kubectl-v23'; 
 import { ManagedPolicy, PolicyDocument, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Stack, ArnFormat, Aws,StackProps, Size } from 'aws-cdk-lib';
 import * as ManagedEndpointConfig from './resources/managed-endpoint.json';
@@ -31,9 +33,10 @@ export class EmrEksStack extends Stack {
     const emrEksCluster = EmrEksCluster.getOrCreate(this,{ 
       eksAdminRoleArn: projectSettings["eks-role-arn"], 
       eksClusterName: clusterName, 
-      autoscaling:Autoscaler.CLUSTER_AUTOSCALER,
+      autoscaling:Autoscaler.KARPENTER,
       defaultNodes: false,
-      kubernetesVersion:KubernetesVersion.V1_22
+      kubernetesVersion:KubernetesVersion.V1_23,
+      kubectlLambdaLayer : new KubectlV23Layer(this, 'KubectlLayer')
     });
     
     //EMR Studio workspace - 1 per project
@@ -55,7 +58,20 @@ export class EmrEksStack extends Stack {
       for ( let managedEnpoint of emrstudio["managed-endpoints"]) {
       
         const endpointName = managedEnpoint["endpoint-name"];
+       
+          const subnets = emrEksCluster.eksCluster.vpc.selectSubnets({
+            onePerAz: true,
+            subnetType: SubnetType.PRIVATE_WITH_EGRESS,
+          }).subnets;
 
+          subnets.forEach( (subnet, index) => {
+            let notebookDriverManfifestYAML = karpenterManifestSetup(emrEksCluster.clusterName,`${__dirname}/resources/notebook-driver-provisioner.yml`, subnet);
+            emrEksCluster.addKarpenterProvisioner(`karpenterNotebookDriverManifest-${endpointName}-${index}`, notebookDriverManfifestYAML);
+        
+            let notebookExecutorManfifestYAML = karpenterManifestSetup(emrEksCluster.clusterName,`${__dirname}/resources/notebook-executor-provisioner.yml`, subnet);
+            emrEksCluster.addKarpenterProvisioner(`karpenterNotebookExecutorManifest-${endpointName}-${index}`, notebookExecutorManfifestYAML);
+          })
+         /*
         // Create managed node group for spark driver
         emrEksCluster.addEmrEksNodegroup(`${this.project}-${endpointName}-driver`, {
           nodegroupName: `${this.project}-${endpointName}-driver`,
@@ -80,7 +96,7 @@ export class EmrEksStack extends Stack {
           labels:{'role': `${endpointName}-notebook`,'spark-role': 'executor','node-lifecycle': 'spot'},
           //taints:[{'key': 'role', 'value': `${endpointName}-notebook`, 'effect': TaintEffect.NO_SCHEDULE}]
         });
-  
+        */
         // IAM Policy 
         const iamPolicy = new ManagedPolicy(this, `${this.project}-${endpointName}-policy`,{
           document: PolicyDocument.fromJson(managedEnpoint["iam-policy"]),
@@ -96,10 +112,11 @@ export class EmrEksStack extends Stack {
                }),
             ],
             actions: [
-              'logs:GetLogEvents',
-              'logs:PutLogEvents',
-              'logs:PutRetentionPolicy',
-              'logs:CreateLogGroup'
+            'logs:CreateLogGroup',
+            'logs:PutLogEvents',
+            'logs:CreateLogStream',
+            'logs:DescribeLogGroups',
+            'logs:DescribeLogStreams'
             ],
           })]
         });
@@ -109,7 +126,7 @@ export class EmrEksStack extends Stack {
          
         let config = this._updateManagedEndpointConfig(
           {...ManagedEndpointConfig, ...managedEnpoint["application-config"]},
-          `${endpointName}-notebook`, 
+          'notebook', 
           managedEnpoint["docker-file"] ? props.managedEndpointImageUri[managedEnpoint["docker-file"]] : null
         );
         

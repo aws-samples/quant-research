@@ -1,52 +1,13 @@
 {
-  "availability-zones:account=318535617973:region=us-east-1": [
-    "us-east-1a",
-    "us-east-1b",
-    "us-east-1c",
-    "us-east-1d",
-    "us-east-1e",
-    "us-east-1f"
-  ],
-  "availability-zones:account=614393260192:region=us-east-1": [
-    "us-east-1a",
-    "us-east-1b",
-    "us-east-1c",
-    "us-east-1d",
-    "us-east-1e",
-    "us-east-1f"
-  ],
-  "availability-zones:account=614393260192:region=us-east-2": [
-    "us-east-2a",
-    "us-east-2b",
-    "us-east-2c"
-  ],
-  "emr-on-eks-ecr-accounts": {
-    "ap-northeast-1": "059004520145",
-    "ap-northeast-2": "996579266876",
-    "ap-south-1": "235914868574",
-    "ap-southeast-1": "671219180197",
-    "ap-southeast-2": "038297999601",
-    "ca-central-1": "351826393999",
-    "eu-central-1": "107292555468",
-    "eu-north-1": "830386416364",
-    "eu-west-1": "483788554619",
-    "eu-west-2": "118780647275",
-    "eu-west-3": "307523725174",
-    "sa-east-1": "052806832358",
-    "us-east-1": "755674844232",
-    "us-east-2": "711395599931",
-    "us-west-1": "608033475327",
-    "us-west-2": "895885662937"
-  },
   "cdk-project": "adx",
   "project=adx": {
-    "eks-role-arn": "arn:aws:iam::444975673530:role/Admin",
+    "eks-role-arn": "arn:aws:iam::<ACCOUNT_ID>:role/<ROLE>",
     "emrstudio": [
       {
         "managed-endpoints": [
           {
             "endpoint-name": "managed-endpoint-1",
-            "emr-version": "emr-6.9.0-latest",
+            "emr-version": "emr-6.10.0-latest",
             "docker-file": "Dockerfile",
             "iam-policy": {
               "Version": "2012-10-17",
@@ -57,8 +18,7 @@
                     "s3:ListBucket"
                   ],
                   "Resource": [
-                    "arn:aws:s3:::maystreetdata",
-                    "arn:aws:s3:::fsidatalake"
+                    "arn:aws:s3:::<S3_BUCKET_NAME>"
                   ]
                 },
                 {
@@ -69,8 +29,7 @@
                     "s3:DeleteObject"
                   ],
                   "Resource": [
-                    "arn:aws:s3:::maystreetdata/*",
-                    "arn:aws:s3:::fsidatalake/*"
+                    "arn:aws:s3:::<S3_BUCKET_NAME>/*",
                   ]
                 }
               ]
@@ -81,29 +40,7 @@
       }
     ]
   },
-  "availability-zones:account=444975673530:region=us-east-1": [
-    "us-east-1a",
-    "us-east-1b",
-    "us-east-1c",
-    "us-east-1d",
-    "us-east-1e",
-    "us-east-1f"
-  ],
   "acknowledged-issue-numbers": [
     21902
-  ],
-  "availability-zones:account=444975673530:region=us-east-2": [
-    "us-east-2a",
-    "us-east-2b",
-    "us-east-2c"
-  ],
-  "availability-zones:account=444975673530:region=us-west-1": [
-    "us-west-1a",
-    "us-west-1b"
-  ],
-  "availability-zones:account=444975673530:region=eu-west-1": [
-    "eu-west-1a",
-    "eu-west-1b",
-    "eu-west-1c"
   ]
 }

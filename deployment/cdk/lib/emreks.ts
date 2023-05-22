@@ -4,7 +4,7 @@ import { karpenterManifestSetup } from 'aws-analytics-reference-architecture/lib
 import { NodegroupAmiType, TaintEffect, CapacityType, KubernetesVersion } from 'aws-cdk-lib/aws-eks';
 import { InstanceType, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { KubectlV23Layer } from '@aws-cdk/lambda-layer-kubectl-v23'; 
-import { ManagedPolicy, PolicyDocument, PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { ManagedPolicy, PolicyDocument, PolicyStatement, Role } from 'aws-cdk-lib/aws-iam';
 import { Stack, ArnFormat, Aws,StackProps, Size } from 'aws-cdk-lib';
 import * as ManagedEndpointConfig from './resources/managed-endpoint.json';
 import * as path from 'path';
@@ -48,6 +48,14 @@ export class EmrEksStack extends Stack {
     });
 
 
+
+    /*const karpenterRole = Role.fromRoleName(this,'karpenterRole',`KarpenterNodeRole-${clusterName}`, {mutable:true});
+    karpenterRole.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AmazonDynamoDBFullAccess'));
+    karpenterRole.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AWSGlueConsoleFullAccess'));
+    
+    karpenterRole.node.addDependency(notebookPlatform);
+    */
+
     // workspace can be linked to muiltiple users
     for ( let emrstudio of projectSettings["emrstudio"]){
       
@@ -71,32 +79,7 @@ export class EmrEksStack extends Stack {
             let notebookExecutorManfifestYAML = karpenterManifestSetup(emrEksCluster.clusterName,`${__dirname}/resources/notebook-executor-provisioner.yml`, subnet);
             emrEksCluster.addKarpenterProvisioner(`karpenterNotebookExecutorManifest-${endpointName}-${index}`, notebookExecutorManfifestYAML);
           })
-         /*
-        // Create managed node group for spark driver
-        emrEksCluster.addEmrEksNodegroup(`${this.project}-${endpointName}-driver`, {
-          nodegroupName: `${this.project}-${endpointName}-driver`,
-          amiType:NodegroupAmiType.AL2_X86_64,
-          instanceTypes: managedEnpoint["spark-driver-instance-types"].map((el:string)=> new InstanceType(el)) as InstanceType[],
-          minSize:1,
-          maxSize:10,
-          mountNvme:managedEnpoint["mount-nvme"] || false,
-          labels:{'role': `${endpointName}-notebook`,'spark-role': 'driver','node-lifecycle': 'on-demand'},
-          //taints:[{'key': 'role', 'value': `${endpointName}-notebook`, 'effect': TaintEffect.NO_SCHEDULE}]
-        });
-        
-        // Create managed node group for spark executors (spot)
-        emrEksCluster.addEmrEksNodegroup(`${this.project}-${endpointName}-executor`, {
-          nodegroupName: `${this.project}-${endpointName}-executor`,
-          amiType:NodegroupAmiType.AL2_X86_64,
-          instanceTypes: managedEnpoint["spark-executor-instance-types"].map((el:string)=> new InstanceType(el)) as InstanceType[],
-          minSize:1,
-          maxSize:100,
-          mountNvme:managedEnpoint["mount-nvme"] || false,
-          capacityType: CapacityType.SPOT,
-          labels:{'role': `${endpointName}-notebook`,'spark-role': 'executor','node-lifecycle': 'spot'},
-          //taints:[{'key': 'role', 'value': `${endpointName}-notebook`, 'effect': TaintEffect.NO_SCHEDULE}]
-        });
-        */
+
         // IAM Policy 
         const iamPolicy = new ManagedPolicy(this, `${this.project}-${endpointName}-policy`,{
           document: PolicyDocument.fromJson(managedEnpoint["iam-policy"]),

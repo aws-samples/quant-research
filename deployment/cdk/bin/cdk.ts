@@ -9,7 +9,7 @@ import { CodeCommitStack } from '../lib/codecommit';
 
 
 const app = new cdk.App();
-// env: { account: '123456789012', region: 'us-east-1' },
+
 const env = { account: process.env.CDK_DEPLOY_ACCOUNT || process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEPLOY_REGION || process.env.CDK_DEFAULT_REGION };
 const project = app.node.tryGetContext('cdk-project');
 

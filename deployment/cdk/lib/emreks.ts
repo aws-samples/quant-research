@@ -17,6 +17,7 @@ interface EmkEksProps extends StackProps {
 
 export class EmrEksStack extends Stack {
   private project:string; 
+  public eksClusterName:string;
   
   constructor(scope: Construct, id: string, props: EmkEksProps) {
     super(scope, id, props);
@@ -28,6 +29,8 @@ export class EmrEksStack extends Stack {
     const clusterName = `${this.project}${props.env!.region}-cluster`;
     const studioName = `${this.project}${props.env!.region}-notebooks`;
     const emrClusterName = `${this.project}${props.env!.region}emr`.replace(/[^a-z0-9]+/g,'');
+    
+    this.eksClusterName = clusterName;
     
     //EKS Cluster - 1 cluster per project
     const emrEksCluster = EmrEksCluster.getOrCreate(this,{ 
@@ -48,13 +51,6 @@ export class EmrEksStack extends Stack {
     });
 
 
-
-    /*const karpenterRole = Role.fromRoleName(this,'karpenterRole',`KarpenterNodeRole-${clusterName}`, {mutable:true});
-    karpenterRole.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AmazonDynamoDBFullAccess'));
-    karpenterRole.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AWSGlueConsoleFullAccess'));
-    
-    karpenterRole.node.addDependency(notebookPlatform);
-    */
 
     // workspace can be linked to muiltiple users
     for ( let emrstudio of projectSettings["emrstudio"]){

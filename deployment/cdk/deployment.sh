@@ -25,7 +25,7 @@ cdk bootstrap aws://${CDK_DEPLOY_ACCOUNT}/${CDK_DEPLOY_REGION}
 #full list https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/docker-custom-images-tag.html
 
 JQ_FILTER='."'$REGION'"'
-ECR_ACCOUNT=$(cat cdk.context.json | jq -r '."emr-on-eks-ecr-accounts"' | jq -r ${JQ_FILTER})     
+ECR_ACCOUNT=$(cat cdk.json | jq -r '.context."emr-on-eks-ecr-accounts"' | jq -r ${JQ_FILTER})     
 
 aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin ${ECR_ACCOUNT}.dkr.ecr.$REGION.amazonaws.com
 

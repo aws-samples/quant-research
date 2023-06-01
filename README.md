@@ -1,10 +1,9 @@
 
-# ADX Project 
+# Quant Research stack using EMR on EKS
 
 ## Installation
 
 We recommend using cloud9 instance to install the project. 
-
 
 
 1. Open `deployment/cdk/cdk.context.json` located in cdk folder to confgure your deployment. CDK configuration allows you to create multiple independent projects using `cdk-project` parameter 

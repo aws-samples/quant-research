@@ -36,8 +36,8 @@
                 "spark.sql.catalog.glue_catalog.client.credentials-provider":"software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider",
                 "spark.executor.extraJavaOptions":"-Dcom.amazonaws.services.s3.enableV4=true",
                 "spark.driver.extraJavaOptions":"-Dcom.amazonaws.services.s3.enableV4=true",
-                "spark.sql.catalog.glue_catalog.s3.access-points.iceberg-warehouse-mrap":"<MRAP ARN>",
-                "spark.sql.catalog.glue_catalog.warehouse":"s3://<S3_BUCKET_NAME>/iceberg/"
+                "spark.sql.catalog.glue_catalog.warehouse":"s3://<S3_BUCKET_NAME>/iceberg/",
+                "spark.sql.catalog.glue_catalog.s3.access-points.<s3-endpoint>":"arn:aws:s3::<ACCOUNT_ID>:accesspoint/<MRAP_ALIAS>"
             }
         },
         {

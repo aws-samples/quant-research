@@ -18,7 +18,8 @@
                     "s3:ListBucket"
                   ],
                   "Resource": [
-                    "arn:aws:s3:::<S3_BUCKET_NAME>"
+                    "arn:aws:s3:::<S3_BUCKET_NAME>",
+                    "arn:aws:s3::<ACCOUNT_ID>:accesspoint/<MRAP ALIAS>"
                   ]
                 },
                 {
@@ -30,6 +31,7 @@
                   ],
                   "Resource": [
                     "arn:aws:s3:::<S3_BUCKET_NAME>/*",
+                    "arn:aws:s3::<ACCOUNT_ID>:accesspoint/<MRAP ALIAS>/*"
                   ]
                 }
               ]

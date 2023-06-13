@@ -1,14 +1,12 @@
-import { Construct } from 'constructs';
-import { EmrEksCluster, NotebookPlatform, StudioAuthMode, SSOIdentityType, NotebookManagedEndpointOptions, Autoscaler, SingletonCfnLaunchTemplate } from 'aws-analytics-reference-architecture';
+import { KubectlV25Layer } from '@aws-cdk/lambda-layer-kubectl-v25';
+import { Autoscaler, EmrEksCluster, NotebookManagedEndpointOptions, NotebookPlatform, SSOIdentityType, StudioAuthMode } from 'aws-analytics-reference-architecture';
 import { karpenterManifestSetup } from 'aws-analytics-reference-architecture/lib/emr-eks-platform/emr-eks-cluster-helpers';
-import { NodegroupAmiType, TaintEffect, CapacityType, KubernetesVersion } from 'aws-cdk-lib/aws-eks';
-import { InstanceType, SubnetType } from 'aws-cdk-lib/aws-ec2';
-import { KubectlV23Layer } from '@aws-cdk/lambda-layer-kubectl-v23'; 
-import { ManagedPolicy, PolicyDocument, PolicyStatement, Role } from 'aws-cdk-lib/aws-iam';
-import { Stack, ArnFormat, Aws,StackProps, Size } from 'aws-cdk-lib';
+import { ArnFormat, Aws, Stack, StackProps } from 'aws-cdk-lib';
+import { SubnetType } from 'aws-cdk-lib/aws-ec2';
+import { KubernetesVersion } from 'aws-cdk-lib/aws-eks';
+import { Effect, ManagedPolicy, PolicyDocument, PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { Construct } from 'constructs';
 import * as ManagedEndpointConfig from './resources/managed-endpoint.json';
-import * as path from 'path';
-import { DockerImageAsset } from 'aws-cdk-lib/aws-ecr-assets';
 
 interface EmkEksProps extends StackProps {
    managedEndpointImageUri: {[key:string] :string};
@@ -38,8 +36,8 @@ export class EmrEksStack extends Stack {
       eksClusterName: clusterName, 
       autoscaling:Autoscaler.KARPENTER,
       defaultNodes: false,
-      kubernetesVersion:KubernetesVersion.V1_23,
-      kubectlLambdaLayer : new KubectlV23Layer(this, 'KubectlLayer')
+      kubernetesVersion:KubernetesVersion.V1_25,
+      kubectlLambdaLayer : new KubectlV25Layer(this, 'KubectlLayer')
     });
     
     //EMR Studio workspace - 1 per project
@@ -77,32 +75,58 @@ export class EmrEksStack extends Stack {
           })
 
         // IAM Policy 
+        const logPolicyStatement = new PolicyStatement({
+          resources: [
+            Stack.of(this).formatArn({
+              account: Aws.ACCOUNT_ID,
+              region: Aws.REGION,
+              service: 'logs',
+              resource: '*',
+              arnFormat: ArnFormat.NO_RESOURCE_NAME,
+            }),
+         ],
+         actions: [
+         'logs:CreateLogGroup',
+         'logs:PutLogEvents',
+         'logs:CreateLogStream',
+         'logs:DescribeLogGroups',
+         'logs:DescribeLogStreams'
+         ],
+       })
+       const icebergGluePolicyStatement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
+          "glue:*"
+        ],
+        resources: ['*']
+       })
+       const dynamoDBPolicyStatement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            "dynamodb:*"
+          ],
+          resources: [
+            Stack.of(this).formatArn({
+              account: Aws.ACCOUNT_ID,
+              region: Aws.REGION,
+              service: 'dynamodb',
+              resource: 'table',
+              resourceName:'GlueLockTable',
+              arnFormat: ArnFormat.SLASH_RESOURCE_NAME
+            })
+          ]
+       })
         const iamPolicy = new ManagedPolicy(this, `${this.project}-${endpointName}-policy`,{
           document: PolicyDocument.fromJson(managedEnpoint["iam-policy"]),
           statements:[
-            new PolicyStatement({
-             resources: [
-               Stack.of(this).formatArn({
-                 account: Aws.ACCOUNT_ID,
-                 region: Aws.REGION,
-                 service: 'logs',
-                 resource: '*',
-                 arnFormat: ArnFormat.NO_RESOURCE_NAME,
-               }),
-            ],
-            actions: [
-            'logs:CreateLogGroup',
-            'logs:PutLogEvents',
-            'logs:CreateLogStream',
-            'logs:DescribeLogGroups',
-            'logs:DescribeLogStreams'
-            ],
-          })]
+            logPolicyStatement,
+            icebergGluePolicyStatement,
+            dynamoDBPolicyStatement
+          ]
         });
   
         //configuration overrides for managed endpoint
-        // takes docker URI from dockerbuild stack
-         
+        //takes docker URI from dockerbuild stack
         let config = this._updateManagedEndpointConfig(
           {...ManagedEndpointConfig, ...managedEnpoint["application-config"]},
           'notebook', 

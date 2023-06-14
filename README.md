@@ -29,7 +29,21 @@ to managed endpoint that has been provisioned.
 There's also codecommit repository setup which access credentials stored in AWS Secrets Manager using `<PROJECT>-codecommit-<REGION>`` as secret name.
 We recommend linking this repository to your EMR Studio Workspace (https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-studio-git-repo.html)
 
-
+## Run Apache Iceberg
+To be able to use the latest version of Apache Iceberg we baked in all the necessary iceberg dependencies in Dockerfile. It's always possible to update this Dockerfile to 
+use latest Iceberg version. There are also couple of other config changes necessary to use Iceberg.
+We control spark configs from `deployment/cdk/lib/resources/managed-endpoint.json`. From this file following config needs to be changed
+```
+"spark.sql.catalog.glue_catalog.warehouse":"s3://<S3_BUCKET_NAME>/iceberg/"
+```
+This will ensure Iceberg uses correct s3 bucket as a warehouse target.
+For Disaster Recovery use cases we recommend using S3's Multi Region Access Points. As MRAP provides global endpoints even if region goes down MRAP endpoint stays consistent. 
+When tables created with MRAP location this will ensure high availability and resilliency. However Spark by default cannot recognize whether bucket alias refers to MRAP endpoint or not
+therefore following config within the same file needs to be changed as well.
+```
+ "spark.sql.catalog.glue_catalog.s3.access-points.<s3-endpoint>":"arn:aws:s3::<ACCOUNT_ID>:accesspoint/<MRAP_ALIAS>"
+```
+That way reads and writes that goes <s3-endpoint> will always use MRAP resource.
 
 
 

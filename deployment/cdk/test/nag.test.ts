@@ -1,13 +1,11 @@
 import * as cdk from 'aws-cdk-lib';
-import { EmrEksStack } from '../lib/emreks';
-import { DockerBuildStack } from '../lib/dockerbuild';
-import { CodeCommitStack } from '../lib/codecommit';
+import {Aspects} from 'aws-cdk-lib';
+import {EmrEksStack} from '../lib/emreks';
+import {DockerBuildStack} from '../lib/dockerbuild';
+import {CodeCommitStack} from '../lib/codecommit';
 
-import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
-import { Aspects, Stack } from 'aws-cdk-lib';
-import { Annotations, Match } from 'aws-cdk-lib/assertions';
-import { EmrEksCluster, Autoscaler } from 'aws-analytics-reference-architecture';
-import { Construct } from 'constructs';
+import {AwsSolutionsChecks, NagSuppressions} from 'cdk-nag';
+import {Annotations, Match} from 'aws-cdk-lib/assertions';
 
 
 const mockApp = new cdk.App({
@@ -67,7 +65,7 @@ const mockApp = new cdk.App({
                     "s3:PutObject",
                     "s3:GetObject",
                     "s3:DeleteObject"
-                  ], 
+                  ],
                   "Resource": [
                     "arn:aws:s3:::maystreetdata/*",
                     "arn:aws:s3:::fsidatalake/*"
@@ -89,9 +87,9 @@ Aspects.of(mockApp).add(new AwsSolutionsChecks({verbose:true}));
    const env = { account: '121212', region: 'us-east-1'};
 
     const codeCommit = new CodeCommitStack(mockApp,`CodeCommitStack`, {env:env});
-    
+
     const docker = new DockerBuildStack(mockApp,`DockerBuildStack`, { env:env});
-    
+
     const emreks = new EmrEksStack(mockApp, `EmrEksStack`, {
       env: env,
       managedEndpointImageUri: docker.dockerUri,
@@ -113,12 +111,6 @@ NagSuppressions.addResourceSuppressionsByPath(codeCommit, '/CodeCommitStack/AWS6
   { id: 'AwsSolutions-L1', reason: 'Built-in CDK component does not allow to specify runtime version' }
 ],true);
 
-
-
-
-
-
-
 NagSuppressions.addResourceSuppressions(emreks,  [
   { id: 'CdkNagValidationFailure', reason: 'ARA Library is verified separately' }
 ],true);
@@ -132,9 +124,6 @@ NagSuppressions.addStackSuppressions(emreks,[
   { id: 'AwsSolutions-S1', reason: 'ARA Library is verified separately'},
   { id: 'AwsSolutions-EKS1', reason: 'ARA Library is verified separately'}
 ], true);
-
-
-
 
 test('codeCommit No unsuppressed Warnings', () => {
   const warnings = Annotations.fromStack(codeCommit).findWarning('*', Match.stringLikeRegexp('AwsSolutions-.*'));

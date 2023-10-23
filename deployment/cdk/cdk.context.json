@@ -7,7 +7,7 @@
         "managed-endpoints": [
           {
             "endpoint-name": "managed-endpoint-1",
-            "emr-version": "emr-6.10.0-latest",
+            "emr-version": "emr-6.12.0-latest",
             "docker-file": "Dockerfile",
             "iam-policy": {
               "Version": "2012-10-17",

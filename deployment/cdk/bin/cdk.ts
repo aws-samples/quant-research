@@ -25,3 +25,4 @@ const emreks = new EmrEksStack(app, `${project}-EmrEksStack`, {
 
 emreks.addDependency(docker);
 emreks.addDependency(codeCommit);
+app.synth();

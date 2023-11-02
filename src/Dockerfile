@@ -20,6 +20,6 @@ ENV MPLLOCALFREETYPE 1
 RUN pip3.9 install -r /app/requirements.txt
 RUN pip3.9 install --upgrade xgboost==2.0.0 lightgbm==4.1.0 catboost==1.2.2 pandas scikit-learn numpy matplotlib pyarrow kaleido bokeh
 RUN pip3.9 install --upgrade backtrader vectorbt alpaca-py pyfolio pyEX yfinance
-RUN pip3.9 install --upgrade dbl-tempo s3fs awswrangler boto3 future
+RUN pip3.9 install --upgrade dbl-tempo s3fs awswrangler boto3>=1.28.71 future
 
 USER hadoop:hadoop

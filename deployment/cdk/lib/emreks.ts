@@ -3,7 +3,9 @@ import {
     Autoscaler,
     NotebookManagedEndpointOptions,
     SSOIdentityType,
-    StudioAuthMode
+    StudioAuthMode,
+    EmrEksCluster,
+    NotebookPlatform
 } from 'aws-analytics-reference-architecture';
 import {
     karpenterManifestSetup
@@ -13,8 +15,6 @@ import {SubnetType} from 'aws-cdk-lib/aws-ec2';
 import {KubernetesVersion} from 'aws-cdk-lib/aws-eks';
 import {Effect, ManagedPolicy, PolicyDocument, PolicyStatement} from 'aws-cdk-lib/aws-iam';
 import {Construct} from 'constructs';
-import {EmrEksCluster} from './aws-analytics-reference-architecture/core/src/emr-eks-platform/emr-eks-cluster';
-import {NotebookPlatform} from './aws-analytics-reference-architecture/core/src/notebook-platform/notebook-platform';
 import * as ManagedEndpointConfig from './resources/managed-endpoint.json';
 
 interface EmkEksProps extends StackProps {

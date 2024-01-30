@@ -17,7 +17,7 @@ REGION=$2
 export CDK_DEPLOY_ACCOUNT=$ACCOUNT
 export CDK_DEPLOY_REGION=$REGION
 
-npm install 
+npm install --force 
 
 cdk bootstrap aws://${CDK_DEPLOY_ACCOUNT}/${CDK_DEPLOY_REGION}
 

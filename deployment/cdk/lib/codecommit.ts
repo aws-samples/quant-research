@@ -63,8 +63,8 @@ export class CodeCommitStack extends cdk.Stack {
       secretName:`${project}-codecommit-${props!.env!.region}`,
       secretObjectValue: {
         repository: SecretValue.unsafePlainText(repo.repositoryCloneUrlHttp),
-        username: SecretValue.unsafePlainText(codeCommitAccess.getResponseField("ServiceSpecificCredential.ServiceUserName")),
-        password: SecretValue.unsafePlainText(codeCommitAccess.getResponseField("ServiceSpecificCredential.ServicePassword"))
+        gitUsername: SecretValue.unsafePlainText(codeCommitAccess.getResponseField("ServiceSpecificCredential.ServiceUserName")),
+        gitPassword: SecretValue.unsafePlainText(codeCommitAccess.getResponseField("ServiceSpecificCredential.ServicePassword"))
       },
     })
 ;

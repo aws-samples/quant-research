@@ -10,6 +10,7 @@ RUN yum install -y libpng-devel sqlite-devel xz-devel gcc-c++ openssl-devel bzip
 RUN wget https://www.python.org/ftp/python/3.9.9/Python-3.9.9.tgz
 RUN tar xzf Python-3.9.9.tgz
 RUN mkdir /app && pip3 freeze > /app/requirements.txt
+RUN sed -i 's/^pyzmq\(.*\)/pyzmq/' /app/requirements.txt
 RUN cd Python-3.9.9 && ./configure --enable-loadable-sqlite-extensions --enable-optimizations
 RUN cd Python-3.9.9 && make altinstall
 RUN python3.9 -m pip install --upgrade pip

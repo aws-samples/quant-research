@@ -4,3 +4,6 @@
 [submodule "quant-research-using-amazon-ecs-and-aws-batch"]
 	path = quant-research-using-amazon-ecs-and-aws-batch
 	url = https://github.com/aws-samples/quant-research-sample-using-amazon-ecs-and-aws-batch.git
+[submodule "aws-batch-runtime-monitoring"]
+	path = aws-batch-runtime-monitoring
+	url = https://github.com/aws-samples/aws-batch-runtime-monitoring.git

@@ -1,0 +1,6 @@
+[submodule "quant-research-using-amazon-emr-and-aws-eks"]
+	path = quant-research-using-amazon-emr-and-aws-eks
+	url = https://github.com/aws-samples/sample-quant-research-using-amazon-emr-and-aws-eks.git
+[submodule "quant-research-using-amazon-ecs-and-aws-batch"]
+	path = quant-research-using-amazon-ecs-and-aws-batch
+	url = https://github.com/aws-samples/quant-research-sample-using-amazon-ecs-and-aws-batch.git

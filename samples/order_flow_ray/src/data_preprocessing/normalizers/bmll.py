@@ -12,7 +12,8 @@ class BMLLNormalizer(DataNormalizer):
     def normalize(self, raw_data: pl.LazyFrame, data_type: str) -> pl.LazyFrame:
         """Pass-through normalization for BMLL data."""
         return raw_data
-    
+
+
     def get_schema(self, data_type: str) -> Dict[str, Any]:
         """Get BMLL schema for data type."""
         return self.schema.get_schema(data_type)

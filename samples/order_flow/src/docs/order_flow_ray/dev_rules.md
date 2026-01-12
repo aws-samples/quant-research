@@ -11,6 +11,13 @@
 
 ## Project Structure Rules
 
+### Working Directories
+
+1. **Ray Pipeline Development**
+   - **Primary Working Directory**: `/Users/blitvin/IdeaProjects/quant-research-sample-using-amazon-ecs-and-aws-batch/samples/order_flow_ray/src`
+   - **Purpose**: All Ray-based pipeline development and production code
+   - **Usage**: New components, data preprocessing, feature engineering, ML pipeline
+
 ### File Organization
 
 1. **Ad-hoc Exploration Scripts**

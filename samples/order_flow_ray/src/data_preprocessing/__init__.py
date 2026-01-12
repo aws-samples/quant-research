@@ -1,0 +1,17 @@
+"""
+Data Preprocessing Module
+
+This module provides data normalization capabilities for converting various
+data sources into a standardized internal format. Currently uses BMLL format
+as the internal standard.
+
+Usage:
+    from data_preprocessing.normalizers import NormalizerFactory
+    
+    normalizer = NormalizerFactory.create("bmll")
+    normalized_data = normalizer.normalize(raw_data, "trades")
+"""
+
+from .normalizers import DataNormalizer, BMLLNormalizer, NormalizerFactory
+
+__all__ = ["DataNormalizer", "BMLLNormalizer", "NormalizerFactory"]

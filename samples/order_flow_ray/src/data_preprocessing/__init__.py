@@ -6,12 +6,12 @@ data sources into a standardized internal format. Currently uses BMLL format
 as the internal standard.
 
 Usage:
-    from data_preprocessing.normalizers import NormalizerFactory
+    from data_preprocessing.data_normalizer import NormalizerFactory
     
     normalizer = NormalizerFactory.create("bmll")
     normalized_data = normalizer.normalize(raw_data, "trades")
 """
 
-from .normalizers import DataNormalizer, BMLLNormalizer, NormalizerFactory
+from .data_normalizer import DataNormalizer, BMLLNormalizer, NormalizerFactory
 
 __all__ = ["DataNormalizer", "BMLLNormalizer", "NormalizerFactory"]

@@ -15,11 +15,11 @@ cp -r ../src .
 
 # Authenticate Docker to ECR
 echo "Authenticating to ECR..."
-aws ecr get-login-password --region us-east-1 --profile ${AWS_PROFILE} | docker login --username AWS --password-stdin ${REGISTRY}
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${REGISTRY}
 
-# Build the image for AMD64 platform (Anyscale clusters)
-echo "Building Docker image for AMD64 platform..."
-docker build --platform linux/amd64 -t ${IMAGE_NAME}:${TAG} .
+# Build the image for ARM64 platform (Ray cluster nodes)
+echo "Building Docker image for ARM64 platform..."
+docker build --platform linux/arm64 -t ${IMAGE_NAME}:${TAG} .
 
 # Tag for registry
 docker tag ${IMAGE_NAME}:${TAG} ${REGISTRY}/${IMAGE_NAME}:${TAG}

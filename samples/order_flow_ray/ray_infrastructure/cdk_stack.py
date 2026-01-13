@@ -52,7 +52,7 @@ class RayDockerPipelineStack(Stack):
                             "echo Build started on `date`",
                             "cd samples/order_flow_ray/ray_infrastructure",
                             "cp -r ../src .",
-                            "docker build --platform linux/amd64 -t $IMAGE_REPO_NAME:$IMAGE_TAG .",
+                            "docker build --platform linux/arm64 -t $IMAGE_REPO_NAME:$IMAGE_TAG .",
                             "docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $ECR_REPOSITORY_URI:$IMAGE_TAG"
                         ]
                     },

@@ -1,6 +1,6 @@
 import boto3
 import polars as pl
-from typing import Dict, Any
+from typing import Dict, Any, List, Tuple
 from .base import DataAccess
 
 class S3DataAccess(DataAccess):
@@ -10,6 +10,17 @@ class S3DataAccess(DataAccess):
         self.profile_name = profile_name
         self.region = region
         self._storage_options = None
+        self._s3_client = None
+    
+    def _get_s3_client(self):
+        """Get boto3 S3 client."""
+        if self._s3_client is None:
+            if self.profile_name:
+                session = boto3.Session(profile_name=self.profile_name)
+            else:
+                session = boto3.Session()
+            self._s3_client = session.client('s3', region_name=self.region)
+        return self._s3_client
     
     def _get_storage_options(self) -> Dict[str, str]:
         """Get AWS credentials for polars S3 access."""
@@ -30,6 +41,28 @@ class S3DataAccess(DataAccess):
                 self._storage_options["aws_session_token"] = credentials.token
         
         return self._storage_options
+    
+    def list_files(self, s3_path: str) -> List[Tuple[str, int]]:
+        """List all files recursively with sizes."""
+        # Parse S3 path
+        if not s3_path.startswith('s3://'):
+            raise ValueError("Path must start with s3://")
+        
+        path_parts = s3_path[5:].split('/', 1)
+        bucket = path_parts[0]
+        prefix = path_parts[1] if len(path_parts) > 1 else ''
+        
+        s3_client = self._get_s3_client()
+        files = []
+        
+        paginator = s3_client.get_paginator('list_objects_v2')
+        for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+            if 'Contents' in page:
+                for obj in page['Contents']:
+                    if not obj['Key'].endswith('/'):
+                        files.append((f"s3://{bucket}/{obj['Key']}", obj['Size']))
+        
+        return files
     
     def read(self, s3_path: str, **kwargs) -> pl.LazyFrame:
         """Read parquet from S3 path."""

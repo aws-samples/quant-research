@@ -6,7 +6,7 @@ from .base import DataAccess
 class S3DataAccess(DataAccess):
     """S3 data access implementation using polars."""
     
-    def __init__(self, profile_name: str = "blitvinfdp", region: str = "us-east-1"):
+    def __init__(self, region: str, profile_name: str = None):
         self.profile_name = profile_name
         self.region = region
         self._storage_options = None
@@ -14,7 +14,10 @@ class S3DataAccess(DataAccess):
     def _get_storage_options(self) -> Dict[str, str]:
         """Get AWS credentials for polars S3 access."""
         if self._storage_options is None:
-            session = boto3.Session(profile_name=self.profile_name)
+            if self.profile_name:
+                session = boto3.Session(profile_name=self.profile_name)
+            else:
+                session = boto3.Session()
             credentials = session.get_credentials()
             
             self._storage_options = {

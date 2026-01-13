@@ -11,6 +11,10 @@ AWS_PROFILE="blitvinfdp"
 
 echo "Building custom Anyscale image..."
 
+# Copy source code to build context
+echo "Copying source code..."
+cp -r ../src .
+
 # Authenticate Docker to ECR
 echo "Authenticating to ECR..."
 aws ecr get-login-password --region us-east-1 --profile ${AWS_PROFILE} | docker login --username AWS --password-stdin ${REGISTRY}
@@ -28,3 +32,7 @@ docker push ${REGISTRY}/${IMAGE_NAME}:${TAG}
 
 echo "Image built and pushed: ${REGISTRY}/${IMAGE_NAME}:${TAG}"
 echo "Use this image in your Anyscale workspace configuration"
+
+# Cleanup
+echo "Cleaning up..."
+rm -rf src

@@ -23,6 +23,12 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 # Create src directory for application code
 RUN mkdir -p /home/ray/order_flow_ray/src
 
+# Debug: List current directory contents
+RUN ls -la
+
+# Copy application code (copy ../src contents to ray_infrastructure/src first)
+COPY src/ /home/ray/order_flow_ray/src/
+
 # Set Python path
 ENV PYTHONPATH=/home/ray/order_flow_ray/src:${PYTHONPATH}
 

@@ -1,8 +1,6 @@
 #!/bin/bash
 # Build and push custom Anyscale image
-
 set -e
-
 # Configuration
 IMAGE_NAME="ray_anyscale_custom"
 TAG="latest"

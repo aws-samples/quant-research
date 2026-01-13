@@ -48,6 +48,13 @@ When context is reset, refer to this document to understand:
 
 ## AWS and S3 Access
 
+### Midway Authentication (REQUIRED)
+- **Critical**: Run `mwinit -s` at the start of every coding session
+- **Purpose**: Authenticates with AWS internal GitLab and signs SSH keys
+- **Frequency**: Required daily or when session expires
+- **Command**: `mwinit -s` (follow prompts for PIN and security key)
+- **Verification**: Should see "Successfully signed SSH public key" message
+
 ### Polars S3 Configuration
 - **Issue**: Polars requires explicit AWS credentials for S3 access
 - **Solution**: Pass credentials via `storage_options` parameter

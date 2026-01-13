@@ -1,0 +1,33 @@
+name: order-flow-ray-workspace
+image: 614393260192.dkr.ecr.us-east-1.amazonaws.com/ray_anyscale_custom:latest
+
+compute_config:
+  head_node_type:
+    name: head-node
+    instance_type: 8CPU-32GB
+    min_workers: 0
+    max_workers: 0
+    
+  worker_node_types:
+    - name: worker-cpu
+      instance_type: 16CPU-64GB
+      min_workers: 0
+      max_workers: 10
+      use_spot: true
+      
+    - name: worker-memory
+      instance_type: 32CPU-128GB  
+      min_workers: 0
+      max_workers: 5
+      use_spot: true
+
+# Environment variables
+env_vars:
+  PYTHONPATH: "/home/ray/src"
+  AWS_DEFAULT_REGION: "us-east-1"
+
+# Initialization commands
+initialization_commands:
+  - echo "Order Flow Ray Pipeline initialized"
+  - python -c "import ray; print('Ray version:', ray.__version__)"
+  - python -c "import polars; print('Polars version:', polars.__version__)"

@@ -1,5 +1,5 @@
 from .base import DataNormalizer
-from .bmll import BMLLNormalizer
+from .bmll_to_norm import BMLLNormalizer
 from .normalized_schema import NormalizedSchema
 from .factory import NormalizerFactory
 

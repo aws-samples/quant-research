@@ -1,5 +1,5 @@
 from .base import DataNormalizer
-from .bmll import BMLLNormalizer
+from .bmll_to_norm import BMLLNormalizer
 
 class NormalizerFactory:
     """Factory for creating data normalizers."""

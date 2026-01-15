@@ -39,7 +39,6 @@ class S3DataAccess(DataAccess):
             
             if credentials.token:
                 self._storage_options["aws_session_token"] = credentials.token
-        
         return self._storage_options
     
     def list_files(self, s3_path: str) -> List[Tuple[str, float]]:

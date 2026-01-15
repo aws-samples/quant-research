@@ -75,57 +75,78 @@ class Pipeline:
     
     def _normalize_step(self, files: list[tuple[str, int]]) -> Any:
         """Execute normalization step."""
-        normalizer = self.config.processing.normalization
+        normalization = self.config.processing.normalization
+        normalized_base_path = self.config.storage.normalized_path
+        raw_base_path = self.config.data.raw_data_path
         
         # Create Ray remote function for normalization
         @ray.remote
-        def normalize_file(file_path: str, region: str) -> tuple[str, int]:
+        def normalize_file(file_path: str, region: str, raw_base: str, normalized_base: str) -> dict:
             import polars as pl
             from data_preprocessing.data_access.factory import DataAccessFactory
             
             data_access = DataAccessFactory.create('s3', region=region)
+            
+            # Read raw data
             df = data_access.read(file_path)
             
             # Normalize (for BMLL, this is pass-through)
-            normalized = normalizer.normalize(df, 'trades')
+            normalized = normalization.normalize(df, 'trades')
+            
+            # Construct output path maintaining same structure
+            # Replace raw base path with normalized base path
+            output_path = file_path.replace(raw_base, normalized_base)
+            
+            # Write normalized data
+            data_access.write(normalized, output_path)
             
             # Get row count
             row_count = normalized.select(pl.count()).collect().item()
             
-            return file_path, row_count
+            return {
+                'input_path': file_path,
+                'output_path': output_path,
+                'row_count': row_count
+            }
         
         # Process files in parallel
         file_paths = [f[0] for f in files]
-        futures = [normalize_file.remote(fp, self.config.region) for fp in file_paths]
+        futures = [
+            normalize_file.remote(fp, self.config.region, raw_base_path, normalized_base_path) 
+            for fp in file_paths
+        ]
         results = ray.get(futures)
         
         print(f"Normalized {len(results)} files")
+        for result in results[:5]:  # Show first 5
+            print(f"  {result['input_path']} -> {result['output_path']} ({result['row_count']:,} rows)")
+        
         return results
     
     def _feature_engineering_step(self, data: Any) -> Any:
         """Execute feature engineering step."""
-        feature_engineer = self.config.processing.feature_engineering
+        feature_engineering = self.config.processing.feature_engineering
         # TODO: Implement feature engineering
         print("Feature engineering not yet implemented")
         return data
     
     def _training_step(self, data: Any) -> Any:
         """Execute training step."""
-        trainer = self.config.processing.training
+        training = self.config.processing.training
         # TODO: Implement training
         print("Training not yet implemented")
         return data
     
     def _inference_step(self, data: Any) -> Any:
         """Execute inference step."""
-        predictor = self.config.processing.inference
+        inference = self.config.processing.inference
         # TODO: Implement inference
         print("Inference not yet implemented")
         return data
     
     def _backtest_step(self, data: Any) -> Any:
         """Execute backtest step."""
-        backtester = self.config.processing.backtest
+        backtest = self.config.processing.backtest
         # TODO: Implement backtest
         print("Backtest not yet implemented")
         return data

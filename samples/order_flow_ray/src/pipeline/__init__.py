@@ -7,6 +7,7 @@ from .config import (
     RayConfig,
 )
 from .pipeline import Pipeline
+from .pipeline_orchestrator import PipelineOrchestrator, ShardConfig
 
 __all__ = [
     'PipelineConfig',
@@ -15,4 +16,6 @@ __all__ = [
     'StorageConfig',
     'RayConfig',
     'Pipeline',
+    'PipelineOrchestrator',
+    'ShardConfig',
 ]

@@ -1,7 +1,6 @@
-"""Run BMLL processing pipeline."""
+"""Run BMLL processing pipeline with orchestrator for parallel execution."""
 import os
-from pipeline.pipeline import Pipeline
-from pipeline.config import PipelineConfig, DataConfig, ProcessingConfig, StorageConfig, RayConfig
+from pipeline import PipelineOrchestrator, PipelineConfig, DataConfig, ProcessingConfig, StorageConfig, RayConfig
 from data_preprocessing.data_normalization import BMLLNormalizer
 
 
@@ -13,15 +12,15 @@ def main():
     config = PipelineConfig(
         region='us-east-1',
         data=DataConfig(
-            raw_data_path='s3://bmll-data-lab-sandbox-us-east-1/data/level_2/XNAS/',
+            raw_data_path='s3://bmll-data-lab-sandbox-us-east-1/data/level_2',
             start_date='2024-01-01',
-            end_date='2024-01-31',
-            exchanges=['XNAS'],
+            end_date='2024-01-03',  # 3 days
+            exchanges=['XNAS', 'XNYS'],  # 2 exchanges
             data_types=['trades', 'level2q']
         ),
         processing=ProcessingConfig(
             normalization=BMLLNormalizer(),
-            feature_engineering=None,  # Skip for now
+            feature_engineering=None,
             training=None,
             inference=None,
             backtest=None
@@ -35,19 +34,18 @@ def main():
         )
     )
     
-    # Run pipeline
-    pipeline = Pipeline(config)
-    results = pipeline.run()
+    # Run orchestrator (will create 6 shards: 3 dates x 2 exchanges)
+    orchestrator = PipelineOrchestrator(config)
+    results = orchestrator.run()
     
     # Display results
-    print("\nPipeline Results:")
-    if isinstance(results, list):
-        for file_path, row_count in results:
-            print(f"  {file_path}: {row_count:,} rows")
-        total_rows = sum(r[1] for r in results)
-        print(f"\nTotal rows processed: {total_rows:,}")
-    else:
-        print(f"  {results}")
+    print("\nOrchestrator Results:")
+    print(f"Processed {len(results)} shards")
+    for result in results:
+        print(f"\nShard: {result['shard_id']}")
+        print(f"  Date: {result['date']}")
+        print(f"  Exchange: {result['exchange']}")
+        print(f"  Result: {result['result']}")
 
 
 if __name__ == "__main__":

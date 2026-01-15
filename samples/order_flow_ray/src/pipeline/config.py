@@ -65,8 +65,8 @@ class RayConfig:
     """
     runtime_env: dict[str, Any]
     resources: dict[str, Any] | None = None
-    memory_multiplier: float = 3.0
-    memory_per_core_gb: float = 2.0
+    memory_multiplier: float = 2.0
+    memory_per_core_gb: float = 4.0
 
 
 @dataclass

@@ -102,6 +102,11 @@ class Pipeline:
             memory_gb = memory_bytes / (1024 ** 3)
             num_cpus = ceil(memory_gb / self.config.ray.memory_per_core_gb) + 1
             
+            print(f"File: {file_path.split('/')[-1]}")
+            print(f"  Size: {file_size / (1024**3):.2f} GB")
+            print(f"  Memory needed: {memory_gb:.2f} GB")
+            print(f"  CPUs: {num_cpus}")
+            
             # Create Ray remote function with dynamic memory and CPUs
             @ray.remote(memory=memory_bytes, num_cpus=num_cpus)
             def normalize_file(fp: str, region: str, raw_base: str, normalized_base: str) -> dict:

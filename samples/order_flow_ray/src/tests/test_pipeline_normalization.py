@@ -34,7 +34,7 @@ def test_pipeline_execution():
             intermediate_path='s3://bmlldata/intermediate',
             output_path='s3://bmlldata/normalized'
         ),
-        ray=RayConfig(runtime_env={"working_dir": "/tmp"})
+        ray=RayConfig(runtime_env={"working_dir": src_dir})
     )
     
     pipeline = Pipeline(config)

@@ -60,9 +60,11 @@ class RayConfig:
     Args:
         runtime_env: Ray runtime environment dict
         resources: Optional resource requirements per task
+        memory_multiplier: Multiplier for file size to estimate memory (default 3.0)
     """
     runtime_env: dict[str, Any]
     resources: dict[str, Any] | None = None
+    memory_multiplier: float = 3.0
 
 
 @dataclass

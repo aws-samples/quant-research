@@ -25,13 +25,19 @@ class Pipeline:
         
         self.data_access = DataAccessFactory.create('s3', region=self.config.region)
     
-    def run(self):
-        """Execute pipeline steps based on configuration."""
+    def run(self, max_files: int | None = None):
+        """Execute pipeline steps based on configuration.
+        
+        Args:
+            max_files: Optional limit on number of files to process for testing
+        """
         self.initialize()
         
         try:
             # Discover files
             files = self._discover_files()
+            if max_files:
+                files = files[:max_files]
             print(f"Discovered {len(files)} files")
             
             # Execute enabled steps
@@ -69,52 +75,51 @@ class Pipeline:
         if not self.data_access:
             self.initialize()
         
-        # For now, discover from raw_data_path
-        # TODO: Add date range and exchange filtering
-        return self.data_access.list_files(self.config.data.raw_data_path)
+        files = self.data_access.list_files(self.config.data.raw_data_path)
+        
+        # Filter out reference data and sort by size descending
+        files = [(path, size) for path, size in files if '/reference/' not in path]
+        files.sort(key=lambda x: x[1], reverse=True)
+        
+        return files
     
     def _normalize_step(self, files: list[tuple[str, int]]) -> Any:
         """Execute normalization step."""
         normalization = self.config.processing.normalization
         normalized_base_path = self.config.storage.normalized_path
         raw_base_path = self.config.data.raw_data_path
-        
-        # Create Ray remote function for normalization
-        @ray.remote
-        def normalize_file(file_path: str, region: str, raw_base: str, normalized_base: str) -> dict:
-            import polars as pl
-            from data_preprocessing.data_access.factory import DataAccessFactory
-            
-            data_access = DataAccessFactory.create('s3', region=region)
-            
-            # Read raw data
-            df = data_access.read(file_path)
-            
-            # Normalize (for BMLL, this is pass-through)
-            normalized = normalization.normalize(df, 'trades')
-            
-            # Construct output path maintaining same structure
-            # Replace raw base path with normalized base path
-            output_path = file_path.replace(raw_base, normalized_base)
-            
-            # Write normalized data
-            data_access.write(normalized, output_path)
-            
-            # Get row count
-            row_count = normalized.select(pl.count()).collect().item()
-            
-            return {
-                'input_path': file_path,
-                'output_path': output_path,
-                'row_count': row_count
-            }
+        memory_multiplier = self.config.ray.memory_multiplier
         
         # Process files in parallel
         file_paths = [f[0] for f in files]
-        futures = [
-            normalize_file.remote(fp, self.config.region, raw_base_path, normalized_base_path) 
-            for fp in file_paths
-        ]
+        file_sizes = [f[1] for f in files]
+        
+        futures = []
+        for file_path, file_size in zip(file_paths, file_sizes):
+            # Calculate memory requirement based on file size
+            memory_bytes = int(file_size * memory_multiplier)
+            
+            # Create Ray remote function with dynamic memory
+            @ray.remote(memory=memory_bytes)
+            def normalize_file(fp: str, region: str, raw_base: str, normalized_base: str) -> dict:
+                import polars as pl
+                from data_preprocessing.data_access.factory import DataAccessFactory
+                
+                data_access = DataAccessFactory.create('s3', region=region)
+                df = data_access.read(fp)
+                normalized = normalization.normalize(df, 'trades')
+                output_path = fp.replace(raw_base, normalized_base)
+                data_access.write(normalized, output_path)
+                row_count = normalized.select(pl.count()).collect().item()
+                
+                return {
+                    'input_path': fp,
+                    'output_path': output_path,
+                    'row_count': row_count
+                }
+            
+            futures.append(normalize_file.remote(file_path, self.config.region, raw_base_path, normalized_base_path))
+        
         results = ray.get(futures)
         
         print(f"Normalized {len(results)} files")

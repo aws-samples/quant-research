@@ -78,9 +78,9 @@ class Pipeline:
         
         files = self.data_access.list_files(self.config.data.raw_data_path)
         
-        # Filter out reference data and sort by size descending
+        # Filter out reference data and sort by size ascending
         files = [(path, size) for path, size in files if '/reference/' not in path]
-        files.sort(key=lambda x: x[1], reverse=True)
+        files.sort(key=lambda x: x[1])
         
         return files
     

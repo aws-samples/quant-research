@@ -42,7 +42,7 @@ class S3DataAccess(DataAccess):
         return self._storage_options
     
     def list_files(self, s3_path: str) -> List[Tuple[str, float]]:
-        """List all files recursively with sizes in GB, sorted ascending."""
+        """List all files recursively with sizes in GB."""
         # Parse S3 path
         if not s3_path.startswith('s3://'):
             raise ValueError("Path must start with s3://")
@@ -62,7 +62,7 @@ class S3DataAccess(DataAccess):
                         size_gb = obj['Size'] / (1024 ** 3)
                         files.append((f"s3://{bucket}/{obj['Key']}", size_gb))
         
-        return sorted(files, key=lambda x: x[1])
+        return files
     
     def read(self, s3_path: str, **kwargs) -> pl.LazyFrame:
         """Read parquet from S3 path."""

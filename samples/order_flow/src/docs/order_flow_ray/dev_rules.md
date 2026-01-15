@@ -9,6 +9,22 @@
 - **Usage**: All scripts must be run with this Python interpreter
 - **Example**: `/opt/homebrew/anaconda3/envs/python_3_10/bin/python3 script_name.py`
 
+### Path Configuration (REQUIRED)
+- **Rule**: All Python scripts and notebooks MUST include this path setup at the top:
+  ```python
+  import sys
+  import os
+  
+  current_dir = os.getcwd()
+  if 'data_preprocessing' in current_dir:
+      src_dir = os.path.dirname(current_dir)
+  else:
+      src_dir = os.path.join(current_dir, 'samples', 'order_flow_ray', 'src')
+  sys.path.append(src_dir)
+  ```
+- **Purpose**: Ensures imports work correctly from any location (notebooks, tests, scripts)
+- **Usage**: Place immediately after standard library imports, before project imports
+
 ## Project Structure Rules
 
 ### Working Directories

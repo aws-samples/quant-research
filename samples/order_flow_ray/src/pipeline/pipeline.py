@@ -107,8 +107,8 @@ class Pipeline:
             print(f"  Memory needed: {memory_gb:.2f} GB")
             print(f"  CPUs: {num_cpus}")
             
-            # Create Ray remote function with dynamic memory and CPUs
-            @ray.remote(memory=memory_bytes, num_cpus=num_cpus)
+            # Create Ray remote function with dynamic CPUs
+            @ray.remote(num_cpus=num_cpus)
             def normalize_file(fp: str, region: str, raw_base: str, normalized_base: str) -> dict:
                 import polars as pl
                 from data_preprocessing.data_access.factory import DataAccessFactory

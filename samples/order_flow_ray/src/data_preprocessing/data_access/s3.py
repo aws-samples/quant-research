@@ -42,8 +42,8 @@ class S3DataAccess(DataAccess):
         
         return self._storage_options
     
-    def list_files(self, s3_path: str) -> List[Tuple[str, int]]:
-        """List all files recursively with sizes."""
+    def list_files(self, s3_path: str) -> List[Tuple[str, float]]:
+        """List all files recursively with sizes in GB, sorted ascending."""
         # Parse S3 path
         if not s3_path.startswith('s3://'):
             raise ValueError("Path must start with s3://")
@@ -60,9 +60,10 @@ class S3DataAccess(DataAccess):
             if 'Contents' in page:
                 for obj in page['Contents']:
                     if not obj['Key'].endswith('/'):
-                        files.append((f"s3://{bucket}/{obj['Key']}", obj['Size']))
+                        size_gb = obj['Size'] / (1024 ** 3)
+                        files.append((f"s3://{bucket}/{obj['Key']}", size_gb))
         
-        return files
+        return sorted(files, key=lambda x: x[1])
     
     def read(self, s3_path: str, **kwargs) -> pl.LazyFrame:
         """Read parquet from S3 path."""
@@ -72,4 +73,4 @@ class S3DataAccess(DataAccess):
     def write(self, data: pl.LazyFrame, s3_path: str, **kwargs) -> None:
         """Write parquet to S3 path."""
         storage_options = self._get_storage_options()
-        data.collect().write_parquet(s3_path, storage_options=storage_options, **kwargs)
+        data.sink_parquet(s3_path, storage_options=storage_options, **kwargs)

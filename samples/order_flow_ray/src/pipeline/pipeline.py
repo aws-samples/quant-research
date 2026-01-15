@@ -1,6 +1,7 @@
 """Pipeline orchestrator for Ray-based BMLL processing."""
 import ray
 import polars as pl
+from math import ceil
 from typing import Any
 from .config import PipelineConfig
 from data_preprocessing.data_access.factory import DataAccessFactory
@@ -96,11 +97,13 @@ class Pipeline:
         
         futures = []
         for file_path, file_size in zip(file_paths, file_sizes):
-            # Calculate memory requirement based on file size
+            # Calculate memory requirement and cores
             memory_bytes = int(file_size * memory_multiplier)
+            memory_gb = memory_bytes / (1024 ** 3)
+            num_cpus = ceil(memory_gb / self.config.ray.memory_per_core_gb) + 1
             
-            # Create Ray remote function with dynamic memory
-            @ray.remote(memory=memory_bytes)
+            # Create Ray remote function with dynamic memory and CPUs
+            @ray.remote(memory=memory_bytes, num_cpus=num_cpus)
             def normalize_file(fp: str, region: str, raw_base: str, normalized_base: str) -> dict:
                 import polars as pl
                 from data_preprocessing.data_access.factory import DataAccessFactory

@@ -102,31 +102,34 @@ class Pipeline:
             memory_gb = memory_bytes / (1024 ** 3)
             num_cpus = ceil(memory_gb / self.config.ray.memory_per_core_gb) + 1
             
-            print(f"File: {file_path.split('/')[-1]}")
-            print(f"  Size: {file_size / (1024**3):.2f} GB")
-            print(f"  Memory needed: {memory_gb:.2f} GB")
-            print(f"  CPUs: {num_cpus}")
-            
             # Create Ray remote function with dynamic CPUs
             @ray.remote(num_cpus=num_cpus)
-            def normalize_file(fp: str, region: str, raw_base: str, normalized_base: str) -> dict:
+            def normalize_file(fp: str, fs: float, region: str, raw_base: str, normalized_base: str, mem_gb: float, cpus: int) -> dict:
                 import polars as pl
                 from data_preprocessing.data_access.factory import DataAccessFactory
                 
                 data_access = DataAccessFactory.create('s3', region=region)
                 df = data_access.read(fp)
                 normalized = normalization.normalize(df, 'trades')
-                output_path = fp.replace(raw_base, normalized_base)
+                
+                # Split path: extract everything after raw_base
+                _, relative_path = fp.split(raw_base.rstrip('/') + '/', 1)
+                output_path = f"{normalized_base.rstrip('/')}/{relative_path}"
+                
                 data_access.write(normalized, output_path)
                 row_count = normalized.select(pl.count()).collect().item()
                 
                 return {
+                    'file': fp.split('/')[-1],
+                    'size_gb': fs,
+                    'memory_gb': mem_gb,
+                    'cpus': cpus,
                     'input_path': fp,
                     'output_path': output_path,
                     'row_count': row_count
                 }
             
-            futures.append(normalize_file.remote(file_path, self.config.region, raw_base_path, normalized_base_path))
+            futures.append(normalize_file.remote(file_path, file_size, self.config.region, raw_base_path, normalized_base_path, memory_gb, num_cpus))
         
         results = ray.get(futures)
         

@@ -81,15 +81,19 @@ class S3TablesDataAccess(DataAccess):
         
         return pl.scan_iceberg(table, **kwargs)
     
-    def write(self, data: pl.LazyFrame, table_name: str, mode: str, **kwargs) -> None:
+    def write(self, data: pl.LazyFrame, table_name: str, mode: str, partition_by: list[str] = None, **kwargs) -> None:
         """Write to S3 Tables Iceberg table using Polars.
         
         Args:
             data: Polars LazyFrame to write
             table_name: Table name (without namespace)
             mode: Write mode - 'append' or 'overwrite'
+            partition_by: List of columns to partition by (year/month/day transforms applied automatically to date columns)
             **kwargs: Additional write options
         """
+        from pyiceberg.partitioning import PartitionSpec, PartitionField
+        from pyiceberg.transforms import YearTransform, MonthTransform, DayTransform, IdentityTransform
+        
         catalog = self._get_catalog()
         full_table_name = f"{self.namespace}.{table_name}"
         
@@ -97,15 +101,40 @@ class S3TablesDataAccess(DataAccess):
         try:
             table = catalog.load_table(full_table_name)
         except Exception:
-            # Create table from schema
+            # Create table with partitioning
+            df_sample = data.limit(1).collect()
+            schema = df_sample.to_arrow().schema
+            
+            partition_spec = None
+            if partition_by:
+                fields = []
+                field_id = 1000
+                
+                # Handle TradeDate with year/month/day transforms
+                if 'TradeDate' in partition_by:
+                    date_idx = schema.get_field_index('TradeDate')
+                    fields.append(PartitionField(source_id=date_idx, field_id=field_id, transform=YearTransform(), name='TradeDate_year'))
+                    field_id += 1
+                    fields.append(PartitionField(source_id=date_idx, field_id=field_id, transform=MonthTransform(), name='TradeDate_month'))
+                    field_id += 1
+                    fields.append(PartitionField(source_id=date_idx, field_id=field_id, transform=DayTransform(), name='TradeDate_day'))
+                    field_id += 1
+                
+                # Handle other columns with identity transform
+                for col in partition_by:
+                    if col != 'TradeDate':
+                        col_idx = schema.get_field_index(col)
+                        fields.append(PartitionField(source_id=col_idx, field_id=field_id, transform=IdentityTransform(), name=col))
+                        field_id += 1
+                
+                partition_spec = PartitionSpec(*fields)
+            
             try:
-                df_sample = data.limit(1).collect()
-                schema = df_sample.to_arrow().schema
-                table = catalog.create_table(full_table_name, schema=schema)
+                table = catalog.create_table(full_table_name, schema=schema, partition_spec=partition_spec)
             except Exception:
                 # Another worker created it, reload
                 table = catalog.load_table(full_table_name)
         
-        # Write using Polars (must collect - no sink_iceberg available)
+        # Write using Polars
         df = data.collect()
         df.write_iceberg(table, mode=mode, **kwargs)

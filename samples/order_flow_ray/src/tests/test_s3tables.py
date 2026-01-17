@@ -21,6 +21,12 @@ def test_s3tables_write():
     s3_access = DataAccessFactory.create('s3', region='us-east-1', profile_name='blitvinfdp')
     df = s3_access.read(s3_file)
     
+    # Add DataType and Region columns for partitioning
+    df = df.with_columns([
+        pl.lit('trades').alias('DataType'),
+        pl.lit('AMERICAS').alias('Region')
+    ])
+    
     print(f"Schema: {df.collect_schema()}")
     print(f"Estimated rows: {df.select(pl.count()).collect().item()}")
     
@@ -36,10 +42,10 @@ def test_s3tables_write():
     # Setup: Create namespace
     s3tables.create_namespace()
     
-    # Write to S3 Tables
+    # Write to S3 Tables with partitioning
     table_name = 'trades_test'
     print(f"\nWriting to S3 Tables: {table_name}")
-    s3tables.write(df, table_name, mode='overwrite')
+    s3tables.write(df, table_name, mode='overwrite', partition_by=['TradeDate', 'DataType', 'Region', 'ISOExchangeCode'])
     
     print(f"✓ Successfully wrote to S3 Tables")
     

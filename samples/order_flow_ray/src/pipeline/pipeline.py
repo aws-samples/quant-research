@@ -131,7 +131,7 @@ class Pipeline:
                 # Read from raw
                 data_access = DataAccessFactory.create('s3', region=region, profile_name=profile)
                 df = data_access.read(fp)
-                normalized = normalization.normalize(df, 'trades')
+                normalized = normalization.normalize(df, 'trades', source_path=fp)
                 
                 # Write to normalized location
                 if norm_loc_dict['access_type'] == 's3tables':
@@ -143,7 +143,7 @@ class Pipeline:
                         profile_name=profile
                     )
                     table_name = norm_loc_dict['table_name']
-                    output_access.write(normalized, table_name, mode='append')
+                    output_access.write(normalized, table_name, mode='append', partition_by=['TradeDate', 'DataType', 'Region', 'ISOExchangeCode'])
                     output_path = f"{norm_loc_dict['namespace']}.{table_name}"
                 else:
                     output_access = data_access

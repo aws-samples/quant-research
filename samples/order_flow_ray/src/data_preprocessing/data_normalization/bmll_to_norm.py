@@ -9,9 +9,27 @@ class BMLLNormalizer(DataNormalizer):
     def __init__(self):
         self.schema = NormalizedSchema()
     
-    def normalize(self, raw_data: pl.LazyFrame, data_type: str) -> pl.LazyFrame:
-        """Pass-through normalization for BMLL data."""
-        return raw_data
+    def normalize(self, raw_data: pl.LazyFrame, data_type: str, source_path: str = None) -> pl.LazyFrame:
+        """Add DataType and Region columns from source path."""
+        df = raw_data
+        
+        if source_path:
+            # Extract from path: YYYY/MM/DD/{data_type}/AMERICAS/{filename}
+            parts = source_path.split('/')
+            data_type_from_path = parts[-3] if len(parts) >= 3 else data_type
+            region = parts[-2] if len(parts) >= 2 else 'AMERICAS'
+            
+            df = df.with_columns([
+                pl.lit(data_type_from_path).alias('DataType'),
+                pl.lit(region).alias('Region')
+            ])
+        else:
+            df = df.with_columns([
+                pl.lit(data_type).alias('DataType'),
+                pl.lit('AMERICAS').alias('Region')
+            ])
+        
+        return df
 
 
     def get_schema(self, data_type: str) -> Dict[str, Any]:

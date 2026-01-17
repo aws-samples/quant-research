@@ -12,6 +12,8 @@ class NormalizedSchema:
     
     def __post_init__(self):
         object.__setattr__(self, 'TRADES', {
+            "DataType": pl.String,
+            "Region": pl.String,
             "ExchangeTicker": pl.String,
             "Ticker": pl.String,
             "ISOExchangeCode": pl.String,
@@ -58,6 +60,8 @@ class NormalizedSchema:
         })
         
         object.__setattr__(self, 'LEVEL2Q', {
+            "DataType": pl.String,
+            "Region": pl.String,
             "Ticker": pl.String,
             "ISOExchangeCode": pl.String,
             "TradeDate": pl.Date,
@@ -139,6 +143,8 @@ class NormalizedSchema:
         })
         
         object.__setattr__(self, 'REFERENCE', {
+            "DataType": pl.String,
+            "Region": pl.String,
             "ListingId": pl.Int64,
             "InstrumentId": pl.Int64,
             "CurrencyCode": pl.String,

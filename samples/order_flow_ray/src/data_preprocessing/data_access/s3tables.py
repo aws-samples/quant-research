@@ -31,6 +31,8 @@ class S3TablesDataAccess(DataAccess):
             else:
                 session = boto3.Session()
             
+            credentials = session.get_credentials()
+            
             catalog_config = {
                 "type": "rest",
                 "uri": f"https://s3tables.{self.region}.amazonaws.com/iceberg",
@@ -39,11 +41,13 @@ class S3TablesDataAccess(DataAccess):
                 "rest.signing-name": "s3tables",
                 "rest.signing-region": self.region,
                 "py-io-impl": "pyiceberg.io.pyarrow.PyArrowFileIO",
+                "s3.region": self.region,
+                "s3.access-key-id": credentials.access_key,
+                "s3.secret-access-key": credentials.secret_key,
             }
             
-            # Pass boto3 session for SigV4 signing
-            import os
-            os.environ["AWS_PROFILE"] = self.profile_name if self.profile_name else ""
+            if credentials.token:
+                catalog_config["s3.session-token"] = credentials.token
             
             self._catalog = load_catalog("s3tables", **catalog_config)
         

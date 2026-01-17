@@ -2,7 +2,7 @@ numpy>=1.26.0
 torch
 pyarrow
 pandas>=2.1.0
-polars>=0.20.0
+polars>=1.24.0
 scikit-learn>=1.3.0
 matplotlib
 seaborn==0.12.2

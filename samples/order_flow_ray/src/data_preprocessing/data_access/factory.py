@@ -1,11 +1,13 @@
 from .base import DataAccess
 from .s3 import S3DataAccess
+from .s3tables import S3TablesDataAccess
 
 class DataAccessFactory:
     """Factory for creating data access implementations."""
     
     _implementations = {
-        "s3": S3DataAccess
+        "s3": S3DataAccess,
+        "s3tables": S3TablesDataAccess
     }
     
     @classmethod

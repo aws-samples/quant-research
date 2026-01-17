@@ -21,7 +21,7 @@ def test_pipeline_execution():
     config = PipelineConfig(
         region='us-east-1',
         data=DataConfig(
-            raw_data_path='s3://bmlldata',
+            raw_data_path='s3://bmlldata/raw',
             start_date='2024-01-02',
             end_date='2024-01-02',
             exchanges=['ARCX'],

@@ -26,8 +26,8 @@ def main():
             backtest=None
         ),
         storage=StorageConfig(
-            intermediate_path='s3://bucket/intermediate',
-            output_path='s3://bucket/output'
+            intermediate_path='s3://orderflowanalysis/intermediate',
+            output_path='s3://orderflowanalysis/output'
         ),
         ray=RayConfig(
             runtime_env={"working_dir": src_dir}

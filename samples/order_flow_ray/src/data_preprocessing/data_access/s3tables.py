@@ -98,9 +98,13 @@ class S3TablesDataAccess(DataAccess):
             table = catalog.load_table(full_table_name)
         except Exception:
             # Create table from schema
-            df_sample = data.limit(1).collect()
-            schema = df_sample.to_arrow().schema
-            table = catalog.create_table(full_table_name, schema=schema)
+            try:
+                df_sample = data.limit(1).collect()
+                schema = df_sample.to_arrow().schema
+                table = catalog.create_table(full_table_name, schema=schema)
+            except Exception:
+                # Another worker created it, reload
+                table = catalog.load_table(full_table_name)
         
         # Write using Polars (must collect - no sink_iceberg available)
         df = data.collect()

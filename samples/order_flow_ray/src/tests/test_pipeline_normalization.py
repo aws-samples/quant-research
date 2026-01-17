@@ -8,7 +8,7 @@ src_dir = os.path.dirname(current_dir)
 sys.path.append(src_dir)
 
 import polars as pl
-from pipeline.config import PipelineConfig, DataConfig, ProcessingConfig, StorageConfig, RayConfig
+from pipeline.config import PipelineConfig, DataConfig, ProcessingConfig, StorageConfig, RayConfig, S3Location
 from pipeline.pipeline import Pipeline
 from data_preprocessing.data_normalization import BMLLNormalizer
 from data_preprocessing.data_access import DataAccessFactory
@@ -31,8 +31,12 @@ def test_pipeline_execution():
             normalization=BMLLNormalizer()
         ),
         storage=StorageConfig(
-            intermediate_path='s3://orderflowanalysis/intermediate',
-            output_path='s3://orderflowanalysis/output'
+            raw_data=S3Location(path='s3://bmlldata/raw'),
+            normalized=S3Location(path='s3://orderflowanalysis/intermediate/normalized'),
+            features=S3Location(path='s3://orderflowanalysis/intermediate/features'),
+            models=S3Location(path='s3://orderflowanalysis/output/models'),
+            predictions=S3Location(path='s3://orderflowanalysis/output/predictions'),
+            backtest=S3Location(path='s3://orderflowanalysis/output/backtest')
         ),
         ray=RayConfig(runtime_env={"working_dir": src_dir})
     )

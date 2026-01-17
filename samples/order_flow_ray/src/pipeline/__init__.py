@@ -4,6 +4,9 @@ from .config import (
     DataConfig,
     ProcessingConfig,
     StorageConfig,
+    StorageLocation,
+    S3Location,
+    S3TablesLocation,
     RayConfig,
 )
 from .pipeline import Pipeline
@@ -14,6 +17,9 @@ __all__ = [
     'DataConfig',
     'ProcessingConfig',
     'StorageConfig',
+    'StorageLocation',
+    'S3Location',
+    'S3TablesLocation',
     'RayConfig',
     'Pipeline',
     'PipelineOrchestrator',

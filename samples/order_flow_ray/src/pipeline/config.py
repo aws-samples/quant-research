@@ -1,6 +1,57 @@
 """Pipeline configuration classes."""
 from dataclasses import dataclass
 from typing import Any
+from abc import ABC, abstractmethod
+
+
+class StorageLocation(ABC):
+    """Base class for storage location configuration."""
+    
+    @abstractmethod
+    def get_access_type(self) -> str:
+        """Return access type ('s3' or 's3tables')."""
+        pass
+    
+    @abstractmethod
+    def get_path(self) -> str:
+        """Return storage path."""
+        pass
+
+
+@dataclass(frozen=True)
+class S3Location(StorageLocation):
+    """S3 storage location.
+    
+    Args:
+        path: S3 path (e.g., 's3://bucket/path')
+    """
+    path: str
+    
+    def get_access_type(self) -> str:
+        return 's3'
+    
+    def get_path(self) -> str:
+        return self.path
+
+
+@dataclass(frozen=True)
+class S3TablesLocation(StorageLocation):
+    """S3 Tables storage location.
+    
+    Args:
+        table_name: Table name
+        table_bucket_arn: S3 Tables bucket ARN
+        namespace: Table namespace
+    """
+    table_name: str
+    table_bucket_arn: str
+    namespace: str
+    
+    def get_access_type(self) -> str:
+        return 's3tables'
+    
+    def get_path(self) -> str:
+        return self.table_name
 
 
 @dataclass(frozen=True)
@@ -23,34 +74,22 @@ class DataConfig:
 
 @dataclass(frozen=True)
 class StorageConfig:
-    """Storage paths configuration.
+    """Storage configuration with granular access control.
     
     Args:
-        intermediate_path: S3 path for intermediate results
-        output_path: S3 path for final outputs
+        raw_data: Input data location
+        normalized: Normalized data location
+        features: Feature data location
+        models: Model storage location
+        predictions: Predictions storage location
+        backtest: Backtest results location
     """
-    intermediate_path: str
-    output_path: str
-    
-    @property
-    def normalized_path(self) -> str:
-        return f"{self.intermediate_path}/normalized"
-    
-    @property
-    def features_path(self) -> str:
-        return f"{self.intermediate_path}/features"
-    
-    @property
-    def models_path(self) -> str:
-        return f"{self.output_path}/models"
-    
-    @property
-    def predictions_path(self) -> str:
-        return f"{self.output_path}/predictions"
-    
-    @property
-    def backtest_path(self) -> str:
-        return f"{self.output_path}/backtest"
+    raw_data: StorageLocation
+    normalized: StorageLocation
+    features: StorageLocation
+    models: StorageLocation
+    predictions: StorageLocation
+    backtest: StorageLocation
 
 
 @dataclass(frozen=True)
@@ -99,9 +138,11 @@ class PipelineConfig:
         processing: Processing steps configuration
         storage: Storage paths configuration
         ray: Ray runtime configuration
+        profile_name: AWS profile name (optional)
     """
     region: str
     data: DataConfig
     processing: ProcessingConfig
     storage: StorageConfig
     ray: RayConfig
+    profile_name: str | None = None

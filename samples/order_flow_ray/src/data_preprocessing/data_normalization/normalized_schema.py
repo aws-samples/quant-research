@@ -56,7 +56,10 @@ class NormalizedSchema:
             "MarketState": pl.String,
             "ExchangeSequenceNo": pl.Int64,
             "BMLLSequenceNo": pl.Int64,
-            "BMLLSequenceSource": pl.Int64
+            "BMLLSequenceSource": pl.Int64,
+            "Year": pl.Int32,
+            "Month": pl.Int8,
+            "Day": pl.Int8
         })
         
         object.__setattr__(self, 'LEVEL2Q', {
@@ -139,7 +142,10 @@ class NormalizedSchema:
             "MarketState": pl.String,
             "ExchangeSequenceNo": pl.Int64,
             "BMLLSequenceNo": pl.Int64,
-            "BMLLSequenceSource": pl.Int64
+            "BMLLSequenceSource": pl.Int64,
+            "Year": pl.Int32,
+            "Month": pl.Int8,
+            "Day": pl.Int8
         })
         
         object.__setattr__(self, 'REFERENCE', {
@@ -166,7 +172,10 @@ class NormalizedSchema:
             "ReutersQuoteId": pl.String,
             "SegmentCode": pl.String,
             "Ticker": pl.String,
-            "Date": pl.Date
+            "Date": pl.Date,
+            "Year": pl.Int32,
+            "Month": pl.Int8,
+            "Day": pl.Int8
         })
     
     def get_schema(self, data_type: str) -> Dict[str, Any]:

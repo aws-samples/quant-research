@@ -19,12 +19,15 @@ def test_s3tables_write():
     # Read S3 file into LazyFrame using S3 data access
     print(f"Reading file: {s3_file}")
     s3_access = DataAccessFactory.create('s3', region='us-east-1', profile_name='blitvinfdp')
-    df = s3_access.read(s3_file)
+    df = s3_access.read(s3_file).limit(1000)
     
-    # Add DataType and Region columns for partitioning
+    # Add DataType, Region, Year, Month, Day columns for partitioning
     df = df.with_columns([
         pl.lit('trades').alias('DataType'),
-        pl.lit('AMERICAS').alias('Region')
+        pl.lit('AMERICAS').alias('Region'),
+        pl.col('TradeDate').dt.year().cast(pl.Int32).alias('Year'),
+        pl.col('TradeDate').dt.month().cast(pl.Int8).alias('Month'),
+        pl.col('TradeDate').dt.day().cast(pl.Int8).alias('Day')
     ])
     
     print(f"Schema: {df.collect_schema()}")
@@ -44,8 +47,23 @@ def test_s3tables_write():
     
     # Write to S3 Tables with partitioning
     table_name = 'trades_test'
+    
+    # Drop table if exists using AWS SDK
+    import boto3
+    s3tables_client = boto3.client('s3tables', region_name='us-east-1')
+    try:
+        s3tables_client.delete_table(
+            tableBucketARN='arn:aws:s3tables:us-east-1:614393260192:bucket/order-flow-analysis-s3table',
+            namespace='trading',
+            name=table_name
+        )
+        print(f'✓ Dropped existing table {table_name}')
+    except s3tables_client.exceptions.NotFoundException:
+        print(f'Table {table_name} does not exist')
+    except Exception as e:
+        print(f'Could not drop table: {e}')
     print(f"\nWriting to S3 Tables: {table_name}")
-    s3tables.write(df, table_name, mode='overwrite', partition_by=['TradeDate', 'DataType', 'Region', 'ISOExchangeCode'])
+    s3tables.write(df, table_name, mode='overwrite', partition_by=['Year', 'Month', 'Day', 'DataType', 'Region', 'ISOExchangeCode'])
     
     print(f"✓ Successfully wrote to S3 Tables")
     

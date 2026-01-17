@@ -10,7 +10,7 @@ class BMLLNormalizer(DataNormalizer):
         self.schema = NormalizedSchema()
     
     def normalize(self, raw_data: pl.LazyFrame, data_type: str, source_path: str = None) -> pl.LazyFrame:
-        """Add DataType and Region columns from source path."""
+        """Add DataType, Region, Year, Month, Day columns."""
         df = raw_data
         
         if source_path:
@@ -28,6 +28,13 @@ class BMLLNormalizer(DataNormalizer):
                 pl.lit(data_type).alias('DataType'),
                 pl.lit('AMERICAS').alias('Region')
             ])
+        
+        # Add year, month, day columns from TradeDate for partitioning
+        df = df.with_columns([
+            pl.col('TradeDate').dt.year().cast(pl.Int32).alias('Year'),
+            pl.col('TradeDate').dt.month().cast(pl.Int8).alias('Month'),
+            pl.col('TradeDate').dt.day().cast(pl.Int8).alias('Day')
+        ])
         
         return df
 

@@ -143,7 +143,7 @@ class Pipeline:
                         profile_name=profile
                     )
                     table_name = norm_loc_dict['table_name']
-                    output_access.write(normalized, table_name, mode='append', partition_by=['TradeDate', 'DataType', 'Region', 'ISOExchangeCode'])
+                    output_access.write(normalized, table_name, mode='append', partition_by=['Year', 'Month', 'Day', 'DataType', 'Region', 'ISOExchangeCode'])
                     output_path = f"{norm_loc_dict['namespace']}.{table_name}"
                 else:
                     output_access = data_access

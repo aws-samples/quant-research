@@ -81,6 +81,54 @@ class S3TablesDataAccess(DataAccess):
         
         return pl.scan_iceberg(table, **kwargs)
     
+    @staticmethod
+    def _infer_schema_from_polars(df: pl.DataFrame):
+        """Convert Polars DataFrame to Iceberg schema.
+        
+        Args:
+            df: Polars DataFrame
+            
+        Returns:
+            Iceberg Schema
+        """
+        from pyiceberg.schema import Schema as IcebergSchema
+        from pyiceberg.types import (
+            NestedField, StringType, LongType, IntegerType, 
+            DoubleType, BooleanType, DateType, TimestampType
+        )
+        import pyarrow as pa
+        
+        arrow_table = df.to_arrow()
+        
+        # Map Arrow types to Iceberg types
+        type_map = {
+            pa.large_string(): StringType(),
+            pa.string(): StringType(),
+            pa.int64(): LongType(),
+            pa.int32(): IntegerType(),
+            pa.int8(): IntegerType(),
+            pa.float64(): DoubleType(),
+            pa.bool_(): BooleanType(),
+            pa.date32(): DateType(),
+        }
+        
+        fields = []
+        for i, field in enumerate(arrow_table.schema):
+            # Map Arrow type to Iceberg type
+            if pa.types.is_timestamp(field.type):
+                iceberg_type = TimestampType()
+            else:
+                iceberg_type = type_map.get(field.type, StringType())
+            
+            fields.append(NestedField(
+                field_id=i+1,
+                name=field.name,
+                field_type=iceberg_type,
+                required=not field.nullable
+            ))
+        
+        return IcebergSchema(*fields)
+    
     def write(self, data: pl.LazyFrame, table_name: str, mode: str, partition_by: list[str] = None, **kwargs) -> None:
         """Write to S3 Tables Iceberg table using Polars.
         
@@ -88,9 +136,13 @@ class S3TablesDataAccess(DataAccess):
             data: Polars LazyFrame to write
             table_name: Table name (without namespace)
             mode: Write mode - 'append' or 'overwrite'
-            partition_by: List of columns to partition by (year/month/day transforms applied automatically to date columns)
+            partition_by: List of columns to partition by
             **kwargs: Additional write options
         """
+        from pyiceberg.partitioning import PartitionSpec, PartitionField
+        from pyiceberg.transforms import YearTransform, MonthTransform, DayTransform, IdentityTransform
+        from pyiceberg.schema import Schema as IcebergSchema
+        
         catalog = self._get_catalog()
         full_table_name = f"{self.namespace}.{table_name}"
         
@@ -98,52 +150,40 @@ class S3TablesDataAccess(DataAccess):
         try:
             table = catalog.load_table(full_table_name)
         except Exception:
-            # Table doesn't exist - will be created by write_iceberg
-            table = None
-        
-        # Write using Polars
-        df = data.collect()
-        
-        if table is None:
-            # First write - create table with partitioning
-            # Note: Polars write_iceberg doesn't support partition_by parameter
-            # We need to create the table first with partition spec
-            from pyiceberg.partitioning import PartitionSpec, PartitionField
-            from pyiceberg.transforms import YearTransform, MonthTransform, DayTransform, IdentityTransform
-            from pyiceberg.schema import Schema
+            # Table doesn't exist - create with partition spec
+            df = data.collect()
+            iceberg_schema = self._infer_schema_from_polars(df)
             
-            # Convert to Arrow and let PyIceberg infer Iceberg schema
-            arrow_table = df.to_arrow()
-            
-            # Build partition spec if provided
+            # Build partition spec using Iceberg schema field IDs - 6 levels
             partition_spec = None
             if partition_by:
                 fields = []
-                field_id = 1000
+                field_id_counter = 1000
                 
-                # Handle TradeDate with year/month/day transforms
-                if 'TradeDate' in partition_by:
-                    # PyIceberg will assign proper source_id during table creation
-                    fields.append(PartitionField(source_id=1, field_id=field_id, transform=YearTransform(), name='TradeDate_year'))
-                    field_id += 1
-                    fields.append(PartitionField(source_id=1, field_id=field_id, transform=MonthTransform(), name='TradeDate_month'))
-                    field_id += 1
-                    fields.append(PartitionField(source_id=1, field_id=field_id, transform=DayTransform(), name='TradeDate_day'))
-                    field_id += 1
-                
-                # Handle other columns with identity transform
-                for i, col in enumerate(partition_by):
-                    if col != 'TradeDate':
-                        fields.append(PartitionField(source_id=i+2, field_id=field_id, transform=IdentityTransform(), name=col))
-                        field_id += 1
+                # 6-level partitioning: Year, Month, Day, DataType, Region, ISOExchangeCode
+                for col in ['Year', 'Month', 'Day', 'DataType', 'Region', 'ISOExchangeCode']:
+                    if col in [f.name for f in iceberg_schema.fields]:
+                        col_field = iceberg_schema.find_field(col)
+                        fields.append(PartitionField(
+                            source_id=col_field.field_id,
+                            field_id=field_id_counter,
+                            transform=IdentityTransform(),
+                            name=col
+                        ))
+                        field_id_counter += 1
                 
                 partition_spec = PartitionSpec(*fields) if fields else None
             
             try:
-                # Create table without explicit schema - let PyIceberg infer from Arrow
-                table = catalog.create_table(full_table_name, schema=arrow_table.schema, partition_spec=partition_spec)
+                table = catalog.create_table(full_table_name, schema=iceberg_schema, partition_spec=partition_spec)
             except Exception:
                 # Another worker created it, reload
                 table = catalog.load_table(full_table_name)
         
+        # Write using Polars
+        if not isinstance(data, pl.DataFrame):
+            df = data.collect()
+        else:
+            df = data
+            
         df.write_iceberg(table, mode=mode, **kwargs)

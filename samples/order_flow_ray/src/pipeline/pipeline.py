@@ -46,20 +46,25 @@ class Pipeline:
         else:
             self.normalized_access = self.data_access
     
-    def run(self, max_files: int | None = None):
+    def run(self, max_files: int | None = None, specific_files: list[str] | None = None):
         """Execute pipeline steps based on configuration.
         
         Args:
             max_files: Optional limit on number of files to process for testing
+            specific_files: Optional list of specific file paths to process
         """
         self.initialize()
         
         try:
-            # Discover files
-            files = self._discover_files()
-            if max_files:
-                files = files[:max_files]
-            print(f"Discovered {len(files)} files")
+            # Discover or use specific files
+            if specific_files:
+                files = [(path, 0) for path in specific_files]  # Size not needed for specific files
+                print(f"Processing {len(files)} specific files")
+            else:
+                files = self._discover_files()
+                if max_files:
+                    files = files[:max_files]
+                print(f"Discovered {len(files)} files")
             
             # Execute enabled steps
             data = files

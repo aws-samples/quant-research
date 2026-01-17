@@ -31,8 +31,8 @@ def test_pipeline_execution():
             normalization=BMLLNormalizer()
         ),
         storage=StorageConfig(
-            intermediate_path='s3://bmlldata/intermediate',
-            output_path='s3://bmlldata/normalized'
+            intermediate_path='s3://orderflowanalysis/intermediate',
+            output_path='s3://orderflowanalysis/output'
         ),
         ray=RayConfig(runtime_env={"working_dir": src_dir})
     )

@@ -142,7 +142,7 @@ class Pipeline:
                         namespace=norm_loc_dict['namespace'],
                         profile_name=profile
                     )
-                    table_name = fp.split('/')[-1].replace('.parquet', '')
+                    table_name = fp.split('/')[-1].replace('.parquet', '').replace('-', '_')
                     output_access.write(normalized, table_name, mode='overwrite')
                     output_path = f"{norm_loc_dict['namespace']}.{table_name}"
                 else:

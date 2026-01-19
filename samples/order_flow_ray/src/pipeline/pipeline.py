@@ -54,7 +54,6 @@ class Pipeline:
             specific_files: Optional list of specific file paths to process
         """
         self.initialize()
-        
         try:
             # Discover or use specific files
             if specific_files:

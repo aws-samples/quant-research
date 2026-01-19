@@ -109,49 +109,61 @@ class Pipeline:
     
     def _normalize_step(self, files: list[tuple[str, int]]) -> Any:
         """Execute normalization step with retry logic."""
-        normalization = self.config.processing.normalization
+        return self._execute_step_with_retry(
+            'normalization',
+            files,
+            self.config.processing.normalization,
+            self._run_normalization
+        )
+    
+    def _execute_step_with_retry(self, step_name: str, data: Any, step_instance: Any, execute_func) -> Any:
+        """Generic retry wrapper for pipeline steps.
         
+        Args:
+            step_name: Name of the step for logging
+            data: Input data for the step
+            step_instance: Step instance with max_retries attribute
+            execute_func: Function to execute the step
+            
+        Returns:
+            Step results
+        """
+        max_retries = getattr(step_instance, 'max_retries', 3)
         all_results = []
-        remaining_files = files
+        remaining_data = data
         
-        for attempt in range(self.config.ray.max_retries + 1):
-            if not remaining_files:
+        for attempt in range(max_retries + 1):
+            if not remaining_data:
                 break
                 
             if attempt > 0:
-                print(f"\nRetry attempt {attempt}/{self.config.ray.max_retries} with {len(remaining_files)} files")
+                print(f"\n{step_name.title()} retry attempt {attempt}/{max_retries} with {len(remaining_data)} items")
             
-            results = self._run_normalization(remaining_files)
+            results = execute_func(remaining_data)
             all_results.extend(results)
             
-            # Get failed items using normalizer's callback
-            def get_failed_files(results_list):
-                failed = [r for r in results_list if r['message'] != 'success']
-                return [(r['input_path'], r['size_gb'] * (1024**3)) for r in failed]
+            # Determine failed items using step's method
+            remaining_data = step_instance.get_failed_items(results)
             
-            failed_callback = normalization.rerun_failed_shards(get_failed_files)
-            remaining_files = failed_callback(results)
-            
-            if not remaining_files:
+            if not remaining_data:
                 break
         
         # Final reporting
-        successful = [r for r in all_results if r['message'] == 'success']
-        failed = [r for r in all_results if r['message'] != 'success']
-        
-        print(f"\nNormalized {len(successful)}/{len(all_results)} files successfully")
-        if failed:
-            print(f"Failed {len(failed)} files after {self.config.ray.max_retries} retries:")
-            for result in failed[:5]:
-                print(f"  {result['input_path']}: {result['message'][:100]}")
-        
-        for result in successful[:5]:
-            print(f"  {result['input_path']} -> {result['output_path']} ({result['row_count']:,} rows)")
+        if step_name == 'normalization':
+            successful = [r for r in all_results if r['message'] == 'success']
+            failed = [r for r in all_results if r['message'] != 'success']
+            
+            print(f"\n{step_name.title()} completed: {len(successful)}/{len(all_results)} files successfully")
+            if failed:
+                print(f"Failed {len(failed)} files after {max_retries} retries:")
+                for result in failed[:5]:
+                    print(f"  {result['input_path']}: {result['message'][:100]}")
+            
+            for result in successful[:5]:
+                print(f"  {result['input_path']} -> {result['output_path']} ({result['row_count']:,} rows)")
         
         return all_results
     
-    def _run_normalization(self, files: list[tuple[str, int]]) -> list[dict]:
-        """Run normalization for given files."""
     def _run_normalization(self, files: list[tuple[str, int]]) -> list[dict]:
         """Run normalization for given files."""
         normalization = self.config.processing.normalization

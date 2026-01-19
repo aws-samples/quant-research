@@ -5,8 +5,9 @@ import polars as pl
 class DataNormalizer(ABC):
     """Base class for data source normalizers."""
     
-    def __init__(self):
+    def __init__(self, max_retries: int = 3):
         self.files: List[tuple[str, int]] = []
+        self.max_retries = max_retries
     
     @abstractmethod
     def normalize(self, raw_data: pl.LazyFrame, data_type: str) -> pl.LazyFrame:
@@ -29,6 +30,18 @@ class DataNormalizer(ABC):
             
         Returns:
             List of (file_path, file_size) tuples
+        """
+        pass
+    
+    @abstractmethod
+    def get_failed_items(self, results: List[Any]) -> List[Any]:
+        """Extract failed items from results for retry.
+        
+        Args:
+            results: List of step execution results
+            
+        Returns:
+            List of items that failed and should be retried
         """
         pass
     

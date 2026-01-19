@@ -6,8 +6,8 @@ from .normalized_schema import NormalizedSchema
 class BMLLNormalizer(DataNormalizer):
     """BMLL data normalizer - pass-through since BMLL is our internal format."""
     
-    def __init__(self):
-        super().__init__()
+    def __init__(self, max_retries: int = 3):
+        super().__init__(max_retries)
         self.schema = NormalizedSchema()
     
     def normalize(self, raw_data: pl.LazyFrame, data_type: str, source_path: str = None) -> pl.LazyFrame:
@@ -64,13 +64,14 @@ class BMLLNormalizer(DataNormalizer):
         self.files = files
         return files
     
-    def rerun_failed_shards(self, get_failed_items: Callable[[List[Any]], List[Any]]) -> Callable[[List[Any]], List[tuple[str, int]]]:
-        """Rerun processing for failed shards.
+    def get_failed_items(self, results: List[Any]) -> List[tuple[str, int]]:
+        """Extract failed files from normalization results.
         
         Args:
-            get_failed_items: Callback that takes results and returns items to rerun
+            results: List of normalization results
             
         Returns:
-            Callback function that processes results and returns failed files
+            List of (file_path, file_size) tuples that failed
         """
-        return get_failed_items
+        failed = [r for r in results if r['message'] != 'success']
+        return [(r['input_path'], int(r['size_gb'] * (1024**3))) for r in failed]

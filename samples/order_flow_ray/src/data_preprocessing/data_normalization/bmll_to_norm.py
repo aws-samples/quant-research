@@ -23,17 +23,21 @@ class BMLLNormalizer(DataNormalizer):
                 pl.lit(data_type_from_path).alias('DataType'),
                 pl.lit(region).alias('Region')
             ])
+            data_type = data_type_from_path
         else:
             df = df.with_columns([
                 pl.lit(data_type).alias('DataType'),
                 pl.lit('AMERICAS').alias('Region')
             ])
         
-        # Add year, month, day columns from TradeDate for partitioning
+        # Use appropriate date column based on data type
+        date_col = 'Date' if data_type == 'reference' else 'EventDate' if data_type == 'level2q' else 'TradeDate'
+        
+        # Add year, month, day columns for partitioning
         df = df.with_columns([
-            pl.col('TradeDate').dt.year().cast(pl.Int32).alias('Year'),
-            pl.col('TradeDate').dt.month().cast(pl.Int8).alias('Month'),
-            pl.col('TradeDate').dt.day().cast(pl.Int8).alias('Day')
+            pl.col(date_col).dt.year().cast(pl.Int32).alias('Year'),
+            pl.col(date_col).dt.month().cast(pl.Int8).alias('Month'),
+            pl.col(date_col).dt.day().cast(pl.Int8).alias('Day')
         ])
         
         return df

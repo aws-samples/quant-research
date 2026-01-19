@@ -75,7 +75,7 @@
       "complete_schema": {
         "Ticker": "String",
         "ISOExchangeCode": "String",
-        "TradeDate": "Date",
+        "EventDate": "Date",
         "EventTimestamp": "Datetime(time_unit='us', time_zone=None)",
         "LocalTimestamp": "Datetime(time_unit='us', time_zone=None)",
         "TimestampNanoseconds": "Int64",
@@ -155,7 +155,7 @@
       "column_list": [
         "Ticker",
         "ISOExchangeCode",
-        "TradeDate",
+        "EventDate",
         "EventTimestamp",
         "LocalTimestamp",
         "TimestampNanoseconds",

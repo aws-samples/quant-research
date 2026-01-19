@@ -133,10 +133,14 @@ class Pipeline:
                 import polars as pl
                 from data_preprocessing.data_access.factory import DataAccessFactory
                 
+                # Extract data_type from path: YYYY/MM/DD/{data_type}/AMERICAS/{filename}
+                parts = fp.split('/')
+                data_type = parts[-3] if len(parts) >= 3 else 'trades'
+                
                 # Read from raw
                 data_access = DataAccessFactory.create('s3', region=region, profile_name=profile)
                 df = data_access.read(fp)
-                normalized = normalization.normalize(df, 'trades', source_path=fp)
+                normalized = normalization.normalize(df, data_type, source_path=fp)
                 
                 # Write to normalized location
                 if norm_loc_dict['access_type'] == 's3tables':
@@ -147,7 +151,8 @@ class Pipeline:
                         namespace=norm_loc_dict['namespace'],
                         profile_name=profile
                     )
-                    table_name = norm_loc_dict['table_name']
+                    # Use data_type-specific table name
+                    table_name = f"{norm_loc_dict['table_name']}_{data_type}"
                     output_access.write(normalized, table_name, mode='append', partition_by=['Year', 'Month', 'Day', 'DataType', 'Region', 'ISOExchangeCode'])
                     output_path = f"{norm_loc_dict['namespace']}.{table_name}"
                 else:
@@ -165,7 +170,8 @@ class Pipeline:
                     'cpus': cpus,
                     'input_path': fp,
                     'output_path': output_path,
-                    'row_count': row_count
+                    'row_count': row_count,
+                    'data_type': data_type
                 }
             
             # Serialize normalized location

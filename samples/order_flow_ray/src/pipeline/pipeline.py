@@ -160,7 +160,9 @@ class Pipeline:
                     print(f"  {result['input_path']}: {result['message'][:100]}")
             
             for result in successful[:5]:
-                print(f"  {result['input_path']} -> {result['output_path']} ({result['row_count']:,} rows)")
+                input_size_mb = result['size_gb'] * 1024
+                output_size_mb = result.get('output_size_mb', 0)
+                print(f"  {result['input_path']} -> {result['output_path']} ({result['row_count']:,} rows, {input_size_mb:.1f}MB -> {output_size_mb:.1f}MB)")
         
         return all_results
     
@@ -219,6 +221,15 @@ class Pipeline:
                     
                     row_count = normalized.select(pl.len()).collect().item()
                     
+                    # Get output file size
+                    if norm_loc_dict['access_type'] == 's3tables':
+                        output_size_mb = 0  # S3 Tables doesn't provide file size
+                    else:
+                        try:
+                            output_size_mb = output_access.get_file_size(output_path) / (1024 ** 2)
+                        except:
+                            output_size_mb = 0
+                    
                     return {
                         'file': fp.split('/')[-1],
                         'size_gb': fs,
@@ -227,6 +238,7 @@ class Pipeline:
                         'input_path': fp,
                         'output_path': output_path,
                         'row_count': row_count,
+                        'output_size_mb': output_size_mb,
                         'data_type': data_type,
                         'stage': str(normalization),
                         'message': 'success'
@@ -240,6 +252,7 @@ class Pipeline:
                         'input_path': fp,
                         'output_path': None,
                         'row_count': None,
+                        'output_size_mb': 0,
                         'data_type': parts[-3] if len(parts := fp.split('/')) >= 3 else 'unknown',
                         'stage': str(normalization),
                         'message': str(e)

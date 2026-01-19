@@ -21,7 +21,7 @@ def test_pipeline_execution():
     config = PipelineConfig(
         region='us-east-1',
         data=DataConfig(
-            raw_data_path='s3://bmlldata/raw',
+            raw_data_path='s3://bmlldata',
             start_date='2024-01-02',
             end_date='2024-01-02',
             exchanges=['ARCX'],
@@ -31,7 +31,7 @@ def test_pipeline_execution():
             normalization=BMLLNormalizer()
         ),
         storage=StorageConfig(
-            raw_data=S3Location(path='s3://bmlldata/raw'),
+            raw_data=S3Location(path='s3://bmlldata'),
             normalized=S3Location(path='s3://orderflowanalysis/intermediate/normalized'),
             features=S3Location(path='s3://orderflowanalysis/intermediate/features'),
             models=S3Location(path='s3://orderflowanalysis/output/models'),

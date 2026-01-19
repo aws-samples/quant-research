@@ -101,11 +101,13 @@ class RayConfig:
         resources: Optional resource requirements per task
         memory_multiplier: Multiplier for file size to estimate memory (default 3.0)
         memory_per_core_gb: Memory per core in GB (default 2.0)
+        cpu_buffer: Additional CPUs to add to calculated requirement (default 1)
     """
     runtime_env: dict[str, Any]
     resources: dict[str, Any] | None = None
     memory_multiplier: float = 2.0
     memory_per_core_gb: float = 4.0
+    cpu_buffer: int = 1
 
 
 @dataclass

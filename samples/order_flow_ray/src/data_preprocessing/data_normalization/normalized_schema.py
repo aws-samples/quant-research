@@ -67,7 +67,7 @@ class NormalizedSchema:
             "Region": pl.String,
             "Ticker": pl.String,
             "ISOExchangeCode": pl.String,
-            "EventDate": pl.Date,
+            "TradeDate": pl.Date,
             "EventTimestamp": pl.Datetime("us"),
             "LocalTimestamp": pl.Datetime("us"),
             "TimestampNanoseconds": pl.Int64,

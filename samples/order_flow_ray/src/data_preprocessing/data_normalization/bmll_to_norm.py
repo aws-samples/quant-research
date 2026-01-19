@@ -31,7 +31,7 @@ class BMLLNormalizer(DataNormalizer):
             ])
         
         # Use appropriate date column based on data type
-        date_col = 'Date' if data_type == 'reference' else 'EventDate' if data_type == 'level2q' else 'TradeDate'
+        date_col = 'Date' if data_type == 'reference' else 'TradeDate'
         
         # Add year, month, day columns for partitioning
         df = df.with_columns([

@@ -125,7 +125,8 @@ class Pipeline:
             # Calculate memory requirement and cores
             memory_bytes = int(file_size * memory_multiplier)
             memory_gb = memory_bytes / (1024 ** 3)
-            num_cpus = ceil(memory_gb / self.config.ray.memory_per_core_gb) + 1
+            base_cpus = ceil(memory_gb / self.config.ray.memory_per_core_gb)
+            num_cpus = base_cpus + ceil(base_cpus * 0.2)
             
             # Create Ray remote function with dynamic CPUs
             @ray.remote(num_cpus=num_cpus)

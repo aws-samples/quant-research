@@ -103,6 +103,7 @@ class RayConfig:
         memory_per_core_gb: Memory per core in GB (default 2.0)
         cpu_buffer: Additional CPUs to add to calculated requirement (default 1)
         max_retries: Maximum retry attempts for failed shards (default 3)
+        file_sort_order: Sort order for files - 'asc' or 'desc' (default 'asc')
     """
     runtime_env: dict[str, Any]
     resources: dict[str, Any] | None = None
@@ -110,6 +111,7 @@ class RayConfig:
     memory_per_core_gb: float = 4.0
     cpu_buffer: int = 1
     max_retries: int = 3
+    file_sort_order: str = 'asc'
 
 
 @dataclass

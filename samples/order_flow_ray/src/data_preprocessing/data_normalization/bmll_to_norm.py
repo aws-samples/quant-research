@@ -7,6 +7,7 @@ class BMLLNormalizer(DataNormalizer):
     """BMLL data normalizer - pass-through since BMLL is our internal format."""
     
     def __init__(self):
+        super().__init__()
         self.schema = NormalizedSchema()
     
     def normalize(self, raw_data: pl.LazyFrame, data_type: str, source_path: str = None) -> pl.LazyFrame:
@@ -46,15 +47,30 @@ class BMLLNormalizer(DataNormalizer):
         """Get BMLL schema for data type."""
         return self.schema.get_schema(data_type)
     
-    def rerun_failed_shards(self, get_failed_items: Callable[[List[Any]], List[Any]]) -> List[Any]:
+    def discover_files(self, data_access, raw_data_path: str, sort_order: str) -> List[tuple[str, int]]:
+        """Discover BMLL files to process.
+        
+        Args:
+            data_access: Data access instance
+            raw_data_path: Base path to raw data
+            sort_order: Sort order - 'asc' or 'desc'
+            
+        Returns:
+            List of (file_path, file_size) tuples sorted by size
+        """
+        files = data_access.list_files(raw_data_path)
+        files = [(path, size) for path, size in files if '/reference/' not in path]
+        files.sort(key=lambda x: x[1], reverse=(sort_order == 'desc'))
+        self.files = files
+        return files
+    
+    def rerun_failed_shards(self, get_failed_items: Callable[[List[Any]], List[Any]]) -> Callable[[List[Any]], List[tuple[str, int]]]:
         """Rerun processing for failed shards.
         
         Args:
             get_failed_items: Callback that takes results and returns items to rerun
             
         Returns:
-            List of items that need reprocessing
+            Callback function that processes results and returns failed files
         """
-        # Default implementation: just call the callback
-        # Subclasses can override for custom logic
         return get_failed_items

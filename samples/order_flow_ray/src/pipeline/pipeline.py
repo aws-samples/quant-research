@@ -101,13 +101,11 @@ class Pipeline:
         if not self.data_access:
             self.initialize()
         
-        files = self.data_access.list_files(self.config.data.raw_data_path)
-        
-        # Filter out reference data and sort by size ascending
-        files = [(path, size) for path, size in files if '/reference/' not in path]
-        files.sort(key=lambda x: x[1])
-        
-        return files
+        return self.config.processing.normalization.discover_files(
+            self.data_access, 
+            self.config.data.raw_data_path, 
+            self.config.ray.file_sort_order
+        )
     
     def _normalize_step(self, files: list[tuple[str, int]]) -> Any:
         """Execute normalization step with retry logic."""

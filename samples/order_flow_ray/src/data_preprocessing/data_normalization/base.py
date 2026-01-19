@@ -5,6 +5,9 @@ import polars as pl
 class DataNormalizer(ABC):
     """Base class for data source normalizers."""
     
+    def __init__(self):
+        self.files: List[tuple[str, int]] = []
+    
     @abstractmethod
     def normalize(self, raw_data: pl.LazyFrame, data_type: str) -> pl.LazyFrame:
         """Normalize raw data to internal format."""
@@ -16,13 +19,26 @@ class DataNormalizer(ABC):
         pass
     
     @abstractmethod
-    def rerun_failed_shards(self, get_failed_items: Callable[[List[Any]], List[Any]]) -> List[Any]:
+    def discover_files(self, data_access, raw_data_path: str, sort_order: str) -> List[tuple[str, int]]:
+        """Discover files to process.
+        
+        Args:
+            data_access: Data access instance
+            raw_data_path: Base path to raw data
+            sort_order: Sort order - 'asc' or 'desc'
+            
+        Returns:
+            List of (file_path, file_size) tuples
+        """
+        pass
+    
+    def rerun_failed_shards(self, get_failed_items: Callable[[List[Any]], List[Any]]) -> Callable[[List[Any]], List[tuple[str, int]]]:
         """Rerun processing for failed shards.
         
         Args:
             get_failed_items: Callback that takes results and returns items to rerun
             
         Returns:
-            List of items that need reprocessing
+            Callback function that processes results and returns failed files
         """
-        pass
+        return get_failed_items

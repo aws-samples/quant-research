@@ -130,49 +130,65 @@ class Pipeline:
             # Create Ray remote function with dynamic CPUs
             @ray.remote(num_cpus=num_cpus)
             def normalize_file(fp: str, fs: float, region: str, raw_base: str, norm_loc_dict: dict, mem_gb: float, cpus: int, profile: str) -> dict:
-                import polars as pl
-                from data_preprocessing.data_access.factory import DataAccessFactory
-                
-                # Extract data_type from path: YYYY/MM/DD/{data_type}/AMERICAS/{filename}
-                parts = fp.split('/')
-                data_type = parts[-3] if len(parts) >= 3 else 'trades'
-                
-                # Read from raw
-                data_access = DataAccessFactory.create('s3', region=region, profile_name=profile)
-                df = data_access.read(fp)
-                normalized = normalization.normalize(df, data_type, source_path=fp)
-                
-                # Write to normalized location
-                if norm_loc_dict['access_type'] == 's3tables':
-                    output_access = DataAccessFactory.create(
-                        's3tables',
-                        region=region,
-                        table_bucket_arn=norm_loc_dict['table_bucket_arn'],
-                        namespace=norm_loc_dict['namespace'],
-                        profile_name=profile
-                    )
-                    # Use data_type-specific table name
-                    table_name = f"{norm_loc_dict['table_name']}_{data_type}"
-                    output_access.write(normalized, table_name, mode='append', partition_by=['Year', 'Month', 'Day', 'DataType', 'Region', 'ISOExchangeCode'])
-                    output_path = f"{norm_loc_dict['namespace']}.{table_name}"
-                else:
-                    output_access = data_access
-                    _, relative_path = fp.split(raw_base.rstrip('/') + '/', 1)
-                    output_path = f"{norm_loc_dict['path'].rstrip('/')}/{relative_path}"
-                    output_access.write(normalized, output_path)
-                
-                row_count = normalized.select(pl.len()).collect().item()
-                
-                return {
-                    'file': fp.split('/')[-1],
-                    'size_gb': fs,
-                    'memory_gb': mem_gb,
-                    'cpus': cpus,
-                    'input_path': fp,
-                    'output_path': output_path,
-                    'row_count': row_count,
-                    'data_type': data_type
-                }
+                try:
+                    import polars as pl
+                    from data_preprocessing.data_access.factory import DataAccessFactory
+                    
+                    # Extract data_type from path: YYYY/MM/DD/{data_type}/AMERICAS/{filename}
+                    parts = fp.split('/')
+                    data_type = parts[-3] if len(parts) >= 3 else 'trades'
+                    
+                    # Read from raw
+                    data_access = DataAccessFactory.create('s3', region=region, profile_name=profile)
+                    df = data_access.read(fp)
+                    normalized = normalization.normalize(df, data_type, source_path=fp)
+                    
+                    # Write to normalized location
+                    if norm_loc_dict['access_type'] == 's3tables':
+                        output_access = DataAccessFactory.create(
+                            's3tables',
+                            region=region,
+                            table_bucket_arn=norm_loc_dict['table_bucket_arn'],
+                            namespace=norm_loc_dict['namespace'],
+                            profile_name=profile
+                        )
+                        # Use data_type-specific table name
+                        table_name = f"{norm_loc_dict['table_name']}_{data_type}"
+                        output_access.write(normalized, table_name, mode='append', partition_by=['Year', 'Month', 'Day', 'DataType', 'Region', 'ISOExchangeCode'])
+                        output_path = f"{norm_loc_dict['namespace']}.{table_name}"
+                    else:
+                        output_access = data_access
+                        _, relative_path = fp.split(raw_base.rstrip('/') + '/', 1)
+                        output_path = f"{norm_loc_dict['path'].rstrip('/')}/{relative_path}"
+                        output_access.write(normalized, output_path)
+                    
+                    row_count = normalized.select(pl.len()).collect().item()
+                    
+                    return {
+                        'file': fp.split('/')[-1],
+                        'size_gb': fs,
+                        'memory_gb': mem_gb,
+                        'cpus': cpus,
+                        'input_path': fp,
+                        'output_path': output_path,
+                        'row_count': row_count,
+                        'data_type': data_type,
+                        'stage': str(normalization),
+                        'message': 'success'
+                    }
+                except Exception as e:
+                    return {
+                        'file': fp.split('/')[-1],
+                        'size_gb': fs,
+                        'memory_gb': mem_gb,
+                        'cpus': cpus,
+                        'input_path': fp,
+                        'output_path': None,
+                        'row_count': None,
+                        'data_type': parts[-3] if len(parts := fp.split('/')) >= 3 else 'unknown',
+                        'stage': str(normalization),
+                        'message': str(e)
+                    }
             
             # Serialize normalized location
             norm_dict = {
@@ -191,8 +207,17 @@ class Pipeline:
         
         results = ray.get(futures)
         
-        print(f"Normalized {len(results)} files")
-        for result in results[:5]:  # Show first 5
+        # Separate successful and failed results
+        successful = [r for r in results if r['message'] == 'success']
+        failed = [r for r in results if r['message'] != 'success']
+        
+        print(f"Normalized {len(successful)}/{len(results)} files successfully")
+        if failed:
+            print(f"Failed {len(failed)} files:")
+            for result in failed[:5]:
+                print(f"  {result['input_path']}: {result['message'][:100]}")
+        
+        for result in successful[:5]:  # Show first 5 successful
             print(f"  {result['input_path']} -> {result['output_path']} ({result['row_count']:,} rows)")
         
         return results

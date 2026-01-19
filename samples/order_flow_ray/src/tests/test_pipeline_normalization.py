@@ -38,7 +38,7 @@ def test_pipeline_execution():
             predictions=S3Location(path='s3://orderflowanalysis/output/predictions'),
             backtest=S3Location(path='s3://orderflowanalysis/output/backtest')
         ),
-        ray=RayConfig(runtime_env={"working_dir": src_dir}, max_retries=3)
+        ray=RayConfig(runtime_env={"working_dir": src_dir}, max_retries=3, cpu_buffer=4)
     )
     
     pipeline = Pipeline(config)

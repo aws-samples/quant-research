@@ -1,6 +1,6 @@
 """Run BMLL processing pipeline with orchestrator for parallel execution."""
 import os
-from pipeline import PipelineOrchestrator, PipelineConfig, DataConfig, ProcessingConfig, StorageConfig, RayConfig, S3Location, S3TablesLocation
+from pipeline import PipelineOrchestrator, PipelineConfig, DataConfig, ProcessingConfig, StorageConfig, RayConfig, S3Location
 from data_preprocessing.data_normalization import BMLLNormalizer
 
 
@@ -28,17 +28,9 @@ def main():
         storage=StorageConfig(
             raw_data=S3Location(path='s3://bmll-data-lab-sandbox-us-east-1/data/level_2'),
             normalized=S3Location(path='s3://orderflowanalysis/intermediate/normalized'),
-            features=S3TablesLocation(
-                table_name='features',
-                table_bucket_arn='arn:aws:s3tables:us-east-1:614393260192:bucket/order-flow-analysis-s3table',
-                namespace='trading'
-            ),
+            features=S3Location(path='s3://orderflowanalysis/intermediate/features'),
             models=S3Location(path='s3://orderflowanalysis/output/models'),
-            predictions=S3TablesLocation(
-                table_name='predictions',
-                table_bucket_arn='arn:aws:s3tables:us-east-1:614393260192:bucket/order-flow-analysis-s3table',
-                namespace='trading'
-            ),
+            predictions=S3Location(path='s3://orderflowanalysis/output/predictions'),
             backtest=S3Location(path='s3://orderflowanalysis/output/backtest')
         ),
         ray=RayConfig(

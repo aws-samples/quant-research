@@ -1,4 +1,4 @@
-"""Test S3 Tables integration - read local file and write to S3 Tables."""
+"""Test S3 write - read and write to S3."""
 import sys
 import os
 
@@ -11,7 +11,7 @@ from data_preprocessing.data_access import DataAccessFactory
 
 
 def test_s3tables_write():
-    """Read local parquet file and write to S3 Tables."""
+    """Read S3 file and write to S3."""
     
     # Path to S3 trade file from documentation
     s3_file = "s3://bmlldata/2024/01/02/trades/AMERICAS/trades-ARCX-20240102.parquet"

@@ -98,21 +98,14 @@ When context is reset, refer to this document to understand:
   ```
 - **Note**: Standard AWS profile configuration alone is insufficient for polars
 
-## S3 Tables and Iceberg
+## S3 Storage
 
-### Partitioning Strategy (REQUIRED)
-- **Rule**: All S3 Tables MUST be partitioned using 6-level structure matching BMLL S3 path
-- **Purpose**: Prevents commit conflicts when multiple Ray workers write simultaneously
-- **Partition Columns** (in order):
-  1. `EventDate` (level2q) or `TradeDate` (trades) or `Date` (reference): Date column, use year transform
-  2. `EventDate` (level2q) or `TradeDate` (trades) or `Date` (reference): Date column, use month transform
-  3. `EventDate` (level2q) or `TradeDate` (trades) or `Date` (reference): Date column, use day transform
-  4. `DataType`: Data type identifier (trades, level2q, reference), use identity transform
-  5. `Region`: Region identifier (AMERICAS), use identity transform
-  6. `ISOExchangeCode`: Exchange identifier (ARCX, XNYS, etc.), use identity transform
-- **Implementation**: Pass appropriate date column based on data_type to partition_by in S3Tables write operations
-- **Note**: Year/month/day transforms are applied automatically by PyIceberg on the date column
-- **Rationale**: Matches BMLL S3 structure `YYYY/MM/DD/{data_type}/AMERICAS/{exchange}`, ensuring each worker writes to unique partition
+### Partitioning Strategy (RECOMMENDED)
+- **Rule**: Use Hive-style partitioning matching BMLL S3 path structure
+- **Purpose**: Enables efficient data filtering and parallel processing
+- **Partition Structure**: `YYYY/MM/DD/{data_type}/AMERICAS/{exchange}/`
+- **Implementation**: Write parquet files to partitioned paths
+- **Rationale**: Matches BMLL S3 structure, ensures each worker writes to unique partition, avoids concurrency issues
 
 ## Future Rules
 

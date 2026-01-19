@@ -110,7 +110,52 @@ class Pipeline:
         return files
     
     def _normalize_step(self, files: list[tuple[str, int]]) -> Any:
-        """Execute normalization step."""
+        """Execute normalization step with retry logic."""
+        normalization = self.config.processing.normalization
+        
+        all_results = []
+        remaining_files = files
+        
+        for attempt in range(self.config.ray.max_retries + 1):
+            if not remaining_files:
+                break
+                
+            if attempt > 0:
+                print(f"\nRetry attempt {attempt}/{self.config.ray.max_retries} with {len(remaining_files)} files")
+            
+            results = self._run_normalization(remaining_files)
+            all_results.extend(results)
+            
+            # Get failed items using normalizer's callback
+            def get_failed_files(results_list):
+                failed = [r for r in results_list if r['message'] != 'success']
+                return [(r['input_path'], r['size_gb'] * (1024**3)) for r in failed]
+            
+            failed_callback = normalization.rerun_failed_shards(get_failed_files)
+            remaining_files = failed_callback(results)
+            
+            if not remaining_files:
+                break
+        
+        # Final reporting
+        successful = [r for r in all_results if r['message'] == 'success']
+        failed = [r for r in all_results if r['message'] != 'success']
+        
+        print(f"\nNormalized {len(successful)}/{len(all_results)} files successfully")
+        if failed:
+            print(f"Failed {len(failed)} files after {self.config.ray.max_retries} retries:")
+            for result in failed[:5]:
+                print(f"  {result['input_path']}: {result['message'][:100]}")
+        
+        for result in successful[:5]:
+            print(f"  {result['input_path']} -> {result['output_path']} ({result['row_count']:,} rows)")
+        
+        return all_results
+    
+    def _run_normalization(self, files: list[tuple[str, int]]) -> list[dict]:
+        """Run normalization for given files."""
+    def _run_normalization(self, files: list[tuple[str, int]]) -> list[dict]:
+        """Run normalization for given files."""
         normalization = self.config.processing.normalization
         normalized_loc = self.config.storage.normalized
         raw_base_path = self.config.data.raw_data_path
@@ -206,20 +251,6 @@ class Pipeline:
             ))
         
         results = ray.get(futures)
-        
-        # Separate successful and failed results
-        successful = [r for r in results if r['message'] == 'success']
-        failed = [r for r in results if r['message'] != 'success']
-        
-        print(f"Normalized {len(successful)}/{len(results)} files successfully")
-        if failed:
-            print(f"Failed {len(failed)} files:")
-            for result in failed[:5]:
-                print(f"  {result['input_path']}: {result['message'][:100]}")
-        
-        for result in successful[:5]:  # Show first 5 successful
-            print(f"  {result['input_path']} -> {result['output_path']} ({result['row_count']:,} rows)")
-        
         return results
     
     def _feature_engineering_step(self, data: Any) -> Any:

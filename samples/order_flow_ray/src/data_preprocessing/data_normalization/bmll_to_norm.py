@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, List, Callable
 import polars as pl
 from .base import DataNormalizer
 from .normalized_schema import NormalizedSchema
@@ -42,7 +42,19 @@ class BMLLNormalizer(DataNormalizer):
         
         return df
 
-
     def get_schema(self, data_type: str) -> Dict[str, Any]:
         """Get BMLL schema for data type."""
         return self.schema.get_schema(data_type)
+    
+    def rerun_failed_shards(self, get_failed_items: Callable[[List[Any]], List[Any]]) -> List[Any]:
+        """Rerun processing for failed shards.
+        
+        Args:
+            get_failed_items: Callback that takes results and returns items to rerun
+            
+        Returns:
+            List of items that need reprocessing
+        """
+        # Default implementation: just call the callback
+        # Subclasses can override for custom logic
+        return get_failed_items

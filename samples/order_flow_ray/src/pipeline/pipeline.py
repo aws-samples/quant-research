@@ -324,7 +324,9 @@ class Pipeline:
                     completed = len(results)
                     scheduled = len(pending_tasks)
                     remaining = total_files - completed - scheduled
-                    print(f"Progress: {completed} completed, {scheduled} scheduled, {remaining} remaining (total: {total_files})")
+                    available_cpus = ray.available_resources().get('CPU', 0)
+                    total_cpus = ray.cluster_resources().get('CPU', 0)
+                    print(f"Progress: {completed} completed, {scheduled} scheduled, {remaining} remaining (total: {total_files}) | CPUs: {available_cpus:.0f}/{total_cpus:.0f} available")
             
             # Submit new task
             pending_tasks.append(submit_task(file_path, file_size))

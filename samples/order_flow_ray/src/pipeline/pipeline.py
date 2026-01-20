@@ -166,24 +166,36 @@ class Pipeline:
         return all_results
     
     def _run_normalization(self, files: list[tuple[str, int]]) -> list[dict]:
-        """Run normalization for given files."""
+        """Run normalization for given files with backpressure."""
         normalization = self.config.processing.normalization
         normalized_loc = self.config.storage.normalized
         raw_base_path = self.config.data.raw_data_path
         memory_multiplier = self.config.ray.memory_multiplier
         
-        # Process files in parallel
-        file_paths = [f[0] for f in files]
-        file_sizes = [f[1] for f in files]
+        # Get max pending tasks from config or default to 100
+        max_pending_tasks = getattr(self.config.ray, 'max_pending_tasks', 100)
         
-        futures = []
-        for file_path, file_size in zip(file_paths, file_sizes):
-            # Calculate memory requirement and cores
+        # Serialize normalized location once
+        norm_dict = {
+            'access_type': normalized_loc.get_access_type(),
+            'path': normalized_loc.get_path(),
+        }
+        if normalized_loc.get_access_type() == 's3tables':
+            norm_dict['table_bucket_arn'] = normalized_loc.table_bucket_arn
+            norm_dict['namespace'] = normalized_loc.namespace
+            norm_dict['table_name'] = normalized_loc.table_name
+        
+        # Backpressure implementation variables
+        pending_tasks = {}  # future -> file_info mapping
+        completed_results = []
+        file_index = 0
+        
+        # Helper function to submit a task
+        def submit_task(file_path, file_size):
             memory_bytes = int(file_size * memory_multiplier)
             memory_gb = memory_bytes / (1024 ** 3)
             num_cpus = ceil(memory_gb / self.config.ray.memory_per_core_gb) + self.config.ray.cpu_buffer
             
-            # Create Ray remote function with dynamic CPUs
             @ray.remote(num_cpus=num_cpus)
             def normalize_file(fp: str, fs: float, region: str, raw_base: str, norm_loc_dict: dict, mem_gb: float, cpus: int, profile: str) -> dict:
                 try:
@@ -257,23 +269,38 @@ class Pipeline:
                         'message': str(e)
                     }
             
-            # Serialize normalized location
-            norm_dict = {
-                'access_type': normalized_loc.get_access_type(),
-                'path': normalized_loc.get_path(),
-            }
-            if normalized_loc.get_access_type() == 's3tables':
-                norm_dict['table_bucket_arn'] = normalized_loc.table_bucket_arn
-                norm_dict['namespace'] = normalized_loc.namespace
-                norm_dict['table_name'] = normalized_loc.table_name
-            
-            futures.append(normalize_file.remote(
-                file_path, file_size, self.config.region, raw_base_path, 
+            future = normalize_file.remote(
+                file_path, file_size, self.config.region, raw_base_path,
                 norm_dict, memory_gb, num_cpus, self.config.profile_name
-            ))
+            )
+            return future
         
-        results = ray.get(futures)
-        return results
+        # Submit initial batch
+        while file_index < len(files) and len(pending_tasks) < max_pending_tasks:
+            file_path, file_size = files[file_index]
+            future = submit_task(file_path, file_size)
+            pending_tasks[future] = (file_path, file_size)
+            file_index += 1
+        
+        # Process remaining files with backpressure
+        while pending_tasks:
+            # Wait for at least one task to complete
+            ready_futures, _ = ray.wait(list(pending_tasks.keys()), num_returns=1)
+            
+            # Process completed tasks
+            for future in ready_futures:
+                result = ray.get(future)
+                completed_results.append(result)
+                del pending_tasks[future]
+            
+            # Submit new tasks up to the limit
+            while file_index < len(files) and len(pending_tasks) < max_pending_tasks:
+                file_path, file_size = files[file_index]
+                future = submit_task(file_path, file_size)
+                pending_tasks[future] = (file_path, file_size)
+                file_index += 1
+        
+        return completed_results
     
     def _feature_engineering_step(self, data: Any) -> Any:
         """Execute feature engineering step."""

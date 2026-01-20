@@ -46,11 +46,12 @@ class Pipeline:
         else:
             self.normalized_access = self.data_access
     
-    def run(self, max_files: int | None = None, specific_files: list[str] | None = None):
+    def run(self, files_slice=slice(None), specific_files: list[str] | None = None):
         """Execute pipeline steps based on configuration.
         
         Args:
-            max_files: Optional limit on number of files to process for testing
+            files_slice: Python slice object for file selection (default: slice(None) = all files)
+                        Examples: slice(1000), slice(1000, None), slice(1500, 2300)
             specific_files: Optional list of specific file paths to process
         """
         self.initialize()
@@ -61,9 +62,8 @@ class Pipeline:
                 print(f"Processing {len(files)} specific files")
             else:
                 files = self._discover_files()
-                if max_files:
-                    files = files[:max_files]
-                print(f"Discovered {len(files)} files")
+                files = files[files_slice]  # Apply slice directly
+                print(f"Processing files[{files_slice}]: {len(files)} files")
             
             # Execute enabled steps
             data = files

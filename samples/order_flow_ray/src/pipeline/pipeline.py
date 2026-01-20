@@ -206,10 +206,13 @@ class Pipeline:
         raw_base_path = self.config.data.raw_data_path
         memory_multiplier = self.config.ray.memory_multiplier
         
-        # Get max pending tasks from config (required)
-        max_pending_tasks = getattr(self.config.ray, 'max_pending_tasks', None)
-        if max_pending_tasks is None:
-            raise ValueError("max_pending_tasks must be specified in ray configuration")
+        # Get CPU multiplier from config
+        cpu_multiplier = getattr(self.config.ray, 'pending_tasks_cpu_multiplier', 1.1)
+        
+        # Helper function to calculate dynamic max pending tasks
+        def get_max_pending_tasks():
+            available_cpus = ray.available_resources().get('CPU', 0)
+            return ceil(available_cpus * cpu_multiplier)
         
         # Serialize normalized location once
         norm_dict = {
@@ -312,6 +315,9 @@ class Pipeline:
         total_files = len(files)
         
         for file_path, file_size in files:
+            # Calculate dynamic max pending tasks
+            max_pending_tasks = get_max_pending_tasks()
+            
             # Wait if we have too many pending tasks
             if len(pending_tasks) >= max_pending_tasks:
                 # Wait for at least one task to complete
@@ -326,7 +332,8 @@ class Pipeline:
                     remaining = total_files - completed - scheduled
                     available_cpus = ray.available_resources().get('CPU', 0)
                     total_cpus = ray.cluster_resources().get('CPU', 0)
-                    print(f"Progress: {completed} completed, {scheduled} scheduled, {remaining} remaining (total: {total_files}) | CPUs: {available_cpus:.0f}/{total_cpus:.0f} available")
+                    current_limit = get_max_pending_tasks()
+                    print(f"Progress: {completed} completed, {scheduled} scheduled, {remaining} remaining (total: {total_files}) | CPUs: {available_cpus:.0f}/{total_cpus:.0f} available | Limit: {current_limit}")
             
             # Submit new task
             pending_tasks.append(submit_task(file_path, file_size))

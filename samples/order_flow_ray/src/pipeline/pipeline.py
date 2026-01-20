@@ -233,9 +233,13 @@ class Pipeline:
         
         # Helper function to submit a task
         def submit_task(file_path, file_size):
-            memory_bytes = int(file_size * memory_multiplier)
-            memory_gb = memory_bytes / (1024 ** 3)
-            num_cpus = ceil(memory_gb / self.config.ray.memory_per_core_gb) + self.config.ray.cpu_buffer
+            if self.config.ray.flat_core_count is not None:
+                num_cpus = self.config.ray.flat_core_count
+                memory_gb = num_cpus * self.config.ray.memory_per_core_gb
+            else:
+                memory_bytes = int(file_size * memory_multiplier)
+                memory_gb = memory_bytes / (1024 ** 3)
+                num_cpus = ceil(memory_gb / self.config.ray.memory_per_core_gb) + self.config.ray.cpu_buffer
             
             @ray.remote(num_cpus=num_cpus, max_retries=0)
             def normalize_file(fp: str, fs: float, region: str, raw_base: str, norm_loc_dict: dict, mem_gb: float, cpus: int, profile: str) -> dict:

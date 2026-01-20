@@ -130,6 +130,8 @@ class Pipeline:
         max_retries = getattr(step_instance, 'max_retries', 3)
         all_results = []
         remaining_data = data
+        original_count = len(data)
+        attempt_details = []
         
         for attempt in range(max_retries + 1):
             if not remaining_data:
@@ -140,6 +142,24 @@ class Pipeline:
             
             results = execute_func(remaining_data)
             all_results.extend(results)
+            
+            # Count success/failure for this attempt
+            attempt_successful = [r for r in results if r['message'] == 'success']
+            attempt_failed = [r for r in results if r['message'] != 'success']
+            
+            # Log attempt results
+            if attempt == 0:
+                print(f"{step_name.title()} attempt {attempt + 1}: {len(attempt_successful)} success, {len(attempt_failed)} failed out of {len(results)} files")
+            else:
+                print(f"{step_name.title()} retry {attempt}: {len(attempt_successful)} success, {len(attempt_failed)} failed out of {len(results)} files")
+            
+            # Store attempt details for final summary
+            attempt_details.append({
+                'attempt': attempt + 1,
+                'processed': len(results),
+                'successful': len(attempt_successful),
+                'failed': len(attempt_failed)
+            })
             
             # Determine failed items using step's method
             remaining_data = step_instance.get_failed_items(results)
@@ -152,16 +172,30 @@ class Pipeline:
             successful = [r for r in all_results if r['message'] == 'success']
             failed = [r for r in all_results if r['message'] != 'success']
             
-            print(f"\n{step_name.title()} completed: {len(successful)}/{len(all_results)} files successfully")
+            print(f"\n{step_name.title()} FINAL SUMMARY:")
+            print(f"Original files: {original_count}")
+            print(f"Total successful: {len(successful)}/{len(all_results)}")
+            print(f"Total failed: {len(failed)}/{len(all_results)}")
+            
+            # Show attempt breakdown
+            print(f"\nAttempt breakdown:")
+            for detail in attempt_details:
+                if detail['attempt'] == 1:
+                    print(f"  Initial attempt: {detail['successful']} success, {detail['failed']} failed")
+                else:
+                    print(f"  Retry {detail['attempt'] - 1}: {detail['successful']} success, {detail['failed']} failed")
+            
             if failed:
-                print(f"Failed {len(failed)} files after {max_retries} retries:")
+                print(f"\nFailed files after {max_retries} retries:")
                 for result in failed[:5]:
                     print(f"  {result['input_path']}: {result['message'][:100]}")
             
-            for result in successful[:5]:
-                input_size_mb = result['size_gb'] * 1024
-                output_size_mb = result.get('output_size_mb', 0)
-                print(f"  {result['input_path']} -> {result['output_path']} ({result['row_count']:,} rows, {input_size_mb:.1f}MB -> {output_size_mb:.1f}MB)")
+            if successful:
+                print(f"\nSample successful files:")
+                for result in successful[:5]:
+                    input_size_mb = result['size_gb'] * 1024
+                    output_size_mb = result.get('output_size_mb', 0)
+                    print(f"  {result['input_path']} -> {result['output_path']} ({result['row_count']:,} rows, {input_size_mb:.1f}MB -> {output_size_mb:.1f}MB)")
         
         return all_results
     

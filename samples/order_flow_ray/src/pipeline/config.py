@@ -104,6 +104,7 @@ class RayConfig:
         cpu_buffer: Additional CPUs to add to calculated requirement (default 1)
         max_retries: Maximum retry attempts for failed shards (default 3)
         file_sort_order: Sort order for files - 'asc' or 'desc' (default 'asc')
+        max_pending_tasks: Maximum number of pending Ray tasks for backpressure
     """
     runtime_env: dict[str, Any]
     resources: dict[str, Any] | None = None
@@ -112,6 +113,7 @@ class RayConfig:
     cpu_buffer: int = 1
     max_retries: int = 3
     file_sort_order: str = 'asc'
+    max_pending_tasks: int | None = None
 
 
 @dataclass

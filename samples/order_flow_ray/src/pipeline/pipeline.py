@@ -309,6 +309,7 @@ class Pipeline:
         # Ray backpressure pattern - exactly as documented
         pending_tasks = []
         results = []
+        total_files = len(files)
         
         for file_path, file_size in files:
             # Wait if we have too many pending tasks
@@ -317,6 +318,13 @@ class Pipeline:
                 ready, pending_tasks = ray.wait(pending_tasks, num_returns=1)
                 # Process completed tasks
                 results.extend(ray.get(ready))
+                
+                # Log progress every 100 completions
+                if len(results) % 100 == 0:
+                    completed = len(results)
+                    scheduled = len(pending_tasks)
+                    remaining = total_files - completed - scheduled
+                    print(f"Progress: {completed} completed, {scheduled} scheduled, {remaining} remaining (total: {total_files})")
             
             # Submit new task
             pending_tasks.append(submit_task(file_path, file_size))

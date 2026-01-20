@@ -206,8 +206,10 @@ class Pipeline:
         raw_base_path = self.config.data.raw_data_path
         memory_multiplier = self.config.ray.memory_multiplier
         
-        # Get max pending tasks from config or default to 100
-        max_pending_tasks = getattr(self.config.ray, 'max_pending_tasks', 100)
+        # Get max pending tasks from config (required)
+        max_pending_tasks = getattr(self.config.ray, 'max_pending_tasks', None)
+        if max_pending_tasks is None:
+            raise ValueError("max_pending_tasks must be specified in ray configuration")
         
         # Serialize normalized location once
         norm_dict = {

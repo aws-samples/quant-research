@@ -212,6 +212,13 @@ class Pipeline:
         # Helper function to calculate dynamic max pending tasks
         def get_max_pending_tasks():
             available_cpus = ray.available_resources().get('CPU', 0)
+            
+            # Handle cold cluster startup (0 CPUs available)
+            if available_cpus == 0:
+                # Use 10% of total files as minimum for cold start
+                cold_start_minimum = ceil(total_files * 0.1)
+                return cold_start_minimum
+            
             return ceil(available_cpus * cpu_multiplier)
         
         # Serialize normalized location once

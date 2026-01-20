@@ -319,8 +319,8 @@ class Pipeline:
                 # Process completed tasks
                 results.extend(ray.get(ready))
                 
-                # Log progress every 100 completions
-                if len(results) % 100 == 0:
+                # Log progress every 10 completions
+                if len(results) % 10 == 0:
                     completed = len(results)
                     scheduled = len(pending_tasks)
                     remaining = total_files - completed - scheduled

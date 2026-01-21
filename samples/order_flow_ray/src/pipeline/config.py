@@ -104,16 +104,18 @@ class RayConfig:
         cpu_buffer: Additional CPUs to add to calculated requirement (default 1)
         max_retries: Maximum retry attempts for failed shards (default 3)
         file_sort_order: Sort order for files - 'asc' or 'desc' (default 'asc')
-        flat_core_count: Fixed core count for all tasks, overrides dynamic calculation if set
+        pending_tasks_cpu_multiplier: Multiplier for available CPUs to calculate max pending tasks (default 1.1 = 110%)
+        flat_core_count: Fixed core count for all tasks, overrides dynamic calculation if set (default 5)
     """
     runtime_env: dict[str, Any]
-    flat_core_count: int | None
     resources: dict[str, Any] | None = None
     memory_multiplier: float = 2.0
     memory_per_core_gb: float = 4.0
     cpu_buffer: int = 1
     max_retries: int = 3
     file_sort_order: str = 'asc'
+    pending_tasks_cpu_multiplier: float = 1.1
+    flat_core_count: int | None = 5
 
 
 @dataclass

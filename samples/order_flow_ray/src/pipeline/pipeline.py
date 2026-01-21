@@ -200,26 +200,11 @@ class Pipeline:
         return all_results
     
     def _run_normalization(self, files: list[tuple[str, int]]) -> list[dict]:
-        """Run normalization for given files with backpressure."""
+        """Run normalization for given files."""
         normalization = self.config.processing.normalization
         normalized_loc = self.config.storage.normalized
         raw_base_path = self.config.data.raw_data_path
         memory_multiplier = self.config.ray.memory_multiplier
-        
-        # Get CPU multiplier from config
-        cpu_multiplier = getattr(self.config.ray, 'pending_tasks_cpu_multiplier', 1.1)
-        
-        # Helper function to calculate dynamic max pending tasks
-        def get_max_pending_tasks():
-            available_cpus = ray.available_resources().get('CPU', 0)
-            
-            # Handle cold cluster startup (0 CPUs available)
-            if available_cpus == 0:
-                # Use 10% of total files as minimum for cold start
-                cold_start_minimum = ceil(total_files * 0.1)
-                return cold_start_minimum
-            
-            return ceil(available_cpus * cpu_multiplier)
         
         # Serialize normalized location once
         norm_dict = {
@@ -320,38 +305,9 @@ class Pipeline:
             )
             return future
         
-        # Ray backpressure pattern - exactly as documented
-        pending_tasks = []
-        results = []
-        total_files = len(files)
-        
-        for file_path, file_size in files:
-            # Calculate dynamic max pending tasks
-            max_pending_tasks = get_max_pending_tasks()
-            
-            # Wait if we have too many pending tasks
-            if len(pending_tasks) >= max_pending_tasks:
-                # Wait for at least one task to complete
-                ready, pending_tasks = ray.wait(pending_tasks, num_returns=1)
-                # Process completed tasks
-                results.extend(ray.get(ready))
-                
-                # Log progress every 10 completions
-                if len(results) % 10 == 0:
-                    completed = len(results)
-                    scheduled = len(pending_tasks)
-                    remaining = total_files - completed - scheduled
-                    available_cpus = ray.available_resources().get('CPU', 0)
-                    total_cpus = ray.cluster_resources().get('CPU', 0)
-                    current_limit = get_max_pending_tasks()
-                    print(f"Progress: {completed} completed, {scheduled} scheduled, {remaining} remaining (total: {total_files}) | CPUs: {available_cpus:.0f}/{total_cpus:.0f} available | Limit: {current_limit}")
-            
-            # Submit new task
-            pending_tasks.append(submit_task(file_path, file_size))
-        
-        # Get remaining results
-        if pending_tasks:
-            results.extend(ray.get(pending_tasks))
+        # Submit all tasks and wait for completion
+        futures = [submit_task(file_path, file_size) for file_path, file_size in files]
+        results = ray.get(futures)
         
         return results
     

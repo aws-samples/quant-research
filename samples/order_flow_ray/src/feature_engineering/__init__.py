@@ -1,10 +1,12 @@
 """Feature engineering module."""
-from .base import FeatureEngineer
-from .factory import FeatureEngineerFactory
-from .order_flow import OrderFlowFeatureEngineer
+from .order_flow import FeatureEngineering, TradeFeatureEngineering, L2QFeatureEngineering
+from .base import TimeBarFeatureEngineering
+from .factory import FeatureEngineeringFactory
 
 __all__ = [
-    'FeatureEngineer',
-    'FeatureEngineerFactory',
-    'OrderFlowFeatureEngineer',
+    'FeatureEngineering',
+    'TimeBarFeatureEngineering',
+    'FeatureEngineeringFactory',
+    'TradeFeatureEngineering',
+    'L2QFeatureEngineering',
 ]

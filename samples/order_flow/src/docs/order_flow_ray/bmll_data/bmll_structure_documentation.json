@@ -33,6 +33,8 @@
   },
   "directory_structure_analysis": {
     "bucket": "bmlldata",
+    "normalized_bucket": "orderflowanalysis",
+    "normalized_path": "s3://orderflowanalysis/intermediate/normalized",
     "pattern": "YYYY/MM/DD/{data_type}/AMERICAS/{filename}",
     "naming_conventions": {
       "trades": "trades-{EXCHANGE}-YYYYMMDD.parquet",

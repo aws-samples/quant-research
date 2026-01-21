@@ -1,0 +1,12 @@
+name: bmll-dataprep-job
+entrypoint: python pipeline_workflow/order_flow_bmll_dataprep.py
+working_dir: .
+requirements: ../ray_infrastructure/requirements.txt
+max_retries: 0
+compute_config:
+  head_node:
+    instance_type: m7a.4xlarge
+  worker_nodes:
+    - instance_type: m7a.2xlarge
+      min_nodes: 0
+      max_nodes: 1000

@@ -1,22 +1,22 @@
-"""Factory for creating feature engineer instances."""
+"""Factory for feature engineering creation."""
 
 
-class FeatureEngineerFactory:
-    """Factory for creating feature engineer instances."""
+class FeatureEngineeringFactory:
+    """Factory for feature engineering creation."""
     
     @staticmethod
-    def create(engineer_type: str, **kwargs):
-        """Create feature engineer instance.
+    def creation(engineering_type: str, **kwargs):
+        """Feature engineering creation.
         
         Args:
-            engineer_type: Type of feature engineer
-            **kwargs: Additional arguments for the engineer
+            engineering_type: Type of feature engineering
+            **kwargs: Additional arguments for the engineering
             
         Returns:
-            FeatureEngineer instance
+            FeatureEngineering instance
         """
-        if engineer_type == 'order_flow':
-            from .order_flow import OrderFlowFeatureEngineer
-            return OrderFlowFeatureEngineer(**kwargs)
+        if engineering_type == 'order_flow':
+            from .order_flow import L2QFeatureEngineering, TradeFeatureEngineering
+            return L2QFeatureEngineering(**kwargs)
         else:
-            raise ValueError(f"Unknown engineer type: {engineer_type}")
+            raise ValueError(f"Unknown engineering type: {engineering_type}")

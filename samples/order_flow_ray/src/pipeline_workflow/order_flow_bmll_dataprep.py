@@ -1,5 +1,8 @@
 """Run BMLL processing pipeline."""
+import sys
 import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from pipeline.config import PipelineConfig, DataConfig, ProcessingConfig, StorageConfig, RayConfig, S3Location
 from pipeline.pipeline import Pipeline
 from data_preprocessing.data_normalization import BMLLNormalizer

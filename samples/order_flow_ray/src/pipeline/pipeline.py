@@ -1,4 +1,5 @@
 """Pipeline orchestrator for Ray-based BMLL processing."""
+import os
 import ray
 import polars as pl
 from math import ceil
@@ -22,7 +23,10 @@ class Pipeline:
     def initialize(self):
         """Initialize Ray and data access."""
         if not ray.is_initialized():
-            ray.init(runtime_env=self.config.ray.runtime_env)
+            if self.config.ray.runtime_env and not self.config.ray.skip_runtime_env:
+                ray.init(runtime_env=self.config.ray.runtime_env)
+            else:
+                ray.init()
         
         # Initialize data access for raw data
         raw_loc = self.config.storage.raw_data

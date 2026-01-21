@@ -13,6 +13,7 @@ boto3
 awswrangler
 sympy
 polars
+pyiceberg
 
 # Ray ecosystem
 ray[default]>=2.9.0

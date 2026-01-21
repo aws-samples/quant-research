@@ -106,6 +106,7 @@ class RayConfig:
         file_sort_order: Sort order for files - 'asc' or 'desc' (default 'asc')
         pending_tasks_cpu_multiplier: Multiplier for available CPUs to calculate max pending tasks (default 1.1 = 110%)
         flat_core_count: Fixed core count for all tasks, overrides dynamic calculation if set (default 5)
+        skip_runtime_env: Skip setting runtime_env in ray.init() (default False, set True for job submission)
     """
     runtime_env: dict[str, Any]
     resources: dict[str, Any] | None = None
@@ -116,6 +117,7 @@ class RayConfig:
     file_sort_order: str = 'asc'
     pending_tasks_cpu_multiplier: float = 1.1
     flat_core_count: int | None = 5
+    skip_runtime_env: bool = False
 
 
 @dataclass

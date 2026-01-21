@@ -41,7 +41,8 @@ def main():
             max_retries=5,
             cpu_buffer=1,
             file_sort_order="desc",
-            pending_tasks_cpu_multiplier=1.1
+            pending_tasks_cpu_multiplier=1.1,
+            skip_runtime_env=True
         )
     )
     

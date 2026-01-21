@@ -26,8 +26,6 @@ echo "=========================================="
 
 cd "$SRC_DIR"
 anyscale job submit \
+  --config-file pipeline_workflow/job_config.yaml \
   --name "$JOB_NAME" \
-  --working-dir . \
-  --requirements ../ray_infrastructure/requirements.txt \
-  --wait \
-  -- python pipeline_workflow/order_flow_bmll_dataprep.py
+  --wait

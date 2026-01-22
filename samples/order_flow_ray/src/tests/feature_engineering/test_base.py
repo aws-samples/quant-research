@@ -123,6 +123,8 @@ def main():
     print("Running feature engineering tests...")
     test_timestamp_precision_conversion()
     test_datetime_to_unix_conversion()
+    test_timebar_feature_engineering_with_s3_data()
+    test_trade_feature_engineering_with_s3_data()
     print("All tests completed!")
 
 

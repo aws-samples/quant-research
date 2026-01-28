@@ -57,5 +57,6 @@ class TimeBarFeatureEngineering:
             )
         
         return data.with_columns([
-            bar_id.alias('bar_id')
+            bar_id.alias('bar_id'),
+            pl.from_epoch(bar_id, time_unit='ms').alias('bar_id_dt')
         ])

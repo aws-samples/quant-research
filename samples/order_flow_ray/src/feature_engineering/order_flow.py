@@ -87,11 +87,21 @@ class TradeFeatureEngineering(FeatureEngineering):
         ])
         
         # Group by bar and compute trade features
-        return df.group_by(['bar_id', 'ExchangeTicker', 'Ticker', 'ISOExchangeCode', 'MIC', 'OPOL', 'ExecutionVenue']).agg([
+        return df.group_by(['bar_id', 'TradeDate', 'ExchangeTicker', 'Ticker', 'ISOExchangeCode', 'MIC', 'OPOL', 'ExecutionVenue']).agg([
+            # Bar datetime (preserve from bar_id_dt)
+            pl.col('bar_id_dt').first().alias('bar_id_dt'),
             # Timestamp features
             pl.col('TradeTimestampNanoseconds').min().alias('bar_start_ns'),
             pl.col('TradeTimestampNanoseconds').max().alias('bar_end_ns'),
             pl.col('TradeTimestampNanoseconds').count().alias('trade_count'),
+            pl.col('TradeTimestamp').min().alias('trade_timestamp_min'),
+            pl.col('TradeTimestamp').max().alias('trade_timestamp_max'),
+            pl.col('PublicationTimestamp').min().alias('publication_timestamp_min'),
+            pl.col('PublicationTimestamp').max().alias('publication_timestamp_max'),
+            pl.col('LocalTradeTimestamp').min().alias('local_trade_timestamp_min'),
+            pl.col('LocalTradeTimestamp').max().alias('local_trade_timestamp_max'),
+            pl.col('LocalPublicationTimestamp').min().alias('local_publication_timestamp_min'),
+            pl.col('LocalPublicationTimestamp').max().alias('local_publication_timestamp_max'),
             
             # Price features (OHLC)
             pl.col('Price').first().alias('price_open'),
@@ -112,15 +122,15 @@ class TradeFeatureEngineering(FeatureEngineering):
             # Imbalance features
             (pl.col('Size') * pl.col('Price') * pl.col('side_sign')).sum().alias('volume_imbalance'),
             pl.col('side_sign').sum().alias('trade_imbalance'),
-            (pl.col('Size') * pl.col('Price')).filter(pl.col('AggressorSide') == 0).sum().alias('unknown_volume'),
-            pl.col('Size').filter(pl.col('AggressorSide') == 0).count().alias('unknown_count'),
+            (pl.col('Size') * pl.col('Price')).filter(pl.col('AggressorSide') == 0).sum().alias('unassigned_volume'),
+            pl.col('Size').filter(pl.col('AggressorSide') == 0).count().alias('unassigned_count'),
             (pl.col('Size') * pl.col('Price')).sum().alias('total_volume'),
             pl.len().alias('total_trades')
         ]).with_columns([
             (pl.col('volume_imbalance') / pl.col('total_volume')).alias('volume_imbalance_ratio'),
             (pl.col('trade_imbalance') / pl.col('total_trades')).alias('trade_imbalance_ratio'),
-            (pl.col('unknown_volume') / pl.col('total_volume')).alias('unknown_volume_ratio'),
-            (pl.col('unknown_count') / pl.col('total_trades')).alias('unknown_count_ratio')
+            (pl.col('unassigned_volume') / pl.col('total_volume')).alias('unassigned_volume_ratio'),
+            (pl.col('unassigned_count') / pl.col('total_trades')).alias('unassigned_count_ratio')
         ])
     
     def failure_extraction(self, results: List[Any]) -> List[Any]:

@@ -90,6 +90,8 @@ class TradeFeatureEngineering(FeatureEngineering):
         return df.group_by(['bar_id', 'TradeDate', 'ExchangeTicker', 'Ticker', 'ISOExchangeCode', 'MIC', 'OPOL', 'ExecutionVenue']).agg([
             # Bar datetime (preserve from bar_id_dt)
             pl.col('bar_id_dt').first().alias('bar_id_dt'),
+            # Bar duration (preserve from bar_duration_ms)
+            pl.col('bar_duration_ms').first().alias('bar_duration_ms'),
             # Timestamp features
             pl.col('TradeTimestampNanoseconds').min().alias('bar_start_ns'),
             pl.col('TradeTimestampNanoseconds').max().alias('bar_end_ns'),

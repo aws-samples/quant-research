@@ -386,6 +386,68 @@
         "BMLLSequenceNo",
         "BMLLSequenceSource"
       ]
+    },
+    "trade_features": {
+      "description": "Aggregated trade features from TradeFeatureEngineering",
+      "total_columns": 40,
+      "grouping_keys": ["bar_id", "TradeDate", "ExchangeTicker", "Ticker", "ISOExchangeCode", "MIC", "OPOL", "ExecutionVenue"],
+      "complete_schema": {
+        "bar_id": "Int64",
+        "TradeDate": "Date",
+        "ExchangeTicker": "String",
+        "Ticker": "String",
+        "ISOExchangeCode": "String",
+        "MIC": "String",
+        "OPOL": "String",
+        "ExecutionVenue": "String",
+        "bar_id_dt": "Datetime(time_unit='ms', time_zone=None)",
+        "bar_duration_ms": "Int64",
+        "bar_start_ns": "Int64",
+        "bar_end_ns": "Int64",
+        "trade_count": "Int64",
+        "trade_timestamp_min": "Datetime(time_unit='us', time_zone=None)",
+        "trade_timestamp_max": "Datetime(time_unit='us', time_zone=None)",
+        "publication_timestamp_min": "Datetime(time_unit='us', time_zone=None)",
+        "publication_timestamp_max": "Datetime(time_unit='us', time_zone=None)",
+        "local_trade_timestamp_min": "Datetime(time_unit='us', time_zone=None)",
+        "local_trade_timestamp_max": "Datetime(time_unit='us', time_zone=None)",
+        "local_publication_timestamp_min": "Datetime(time_unit='us', time_zone=None)",
+        "local_publication_timestamp_max": "Datetime(time_unit='us', time_zone=None)",
+        "price_open": "Float64",
+        "price_high": "Float64",
+        "price_low": "Float64",
+        "price_close": "Float64",
+        "price_mean": "Float64",
+        "volume": "Float64",
+        "avg_trade_size": "Float64",
+        "max_trade_size": "Float64",
+        "price_volume_sum": "Float64",
+        "vwap": "Float64",
+        "volume_imbalance": "Float64",
+        "trade_imbalance": "Int64",
+        "unassigned_volume": "Float64",
+        "unassigned_count": "Int64",
+        "total_volume": "Float64",
+        "total_trades": "Int64",
+        "volume_imbalance_ratio": "Float64",
+        "trade_imbalance_ratio": "Float64",
+        "unassigned_volume_ratio": "Float64",
+        "unassigned_count_ratio": "Float64"
+      },
+      "feature_categories": {
+        "bar_metadata": ["bar_id", "bar_id_dt", "bar_duration_ms"],
+        "timestamp_features": ["bar_start_ns", "bar_end_ns", "trade_count", "trade_timestamp_min", "trade_timestamp_max", "publication_timestamp_min", "publication_timestamp_max", "local_trade_timestamp_min", "local_trade_timestamp_max", "local_publication_timestamp_min", "local_publication_timestamp_max"],
+        "price_features": ["price_open", "price_high", "price_low", "price_close", "price_mean"],
+        "volume_features": ["volume", "avg_trade_size", "max_trade_size"],
+        "vwap_features": ["price_volume_sum", "vwap"],
+        "imbalance_features": ["volume_imbalance", "trade_imbalance", "unassigned_volume", "unassigned_count", "total_volume", "total_trades"],
+        "ratio_features": ["volume_imbalance_ratio", "trade_imbalance_ratio", "unassigned_volume_ratio", "unassigned_count_ratio"]
+      },
+      "aggressor_side_mapping": {
+        "1": "Buy (buyer initiated)",
+        "2": "Sell (seller initiated)", 
+        "0": "Unassigned (no clear aggressor)"
+      }
     }
   }
 }

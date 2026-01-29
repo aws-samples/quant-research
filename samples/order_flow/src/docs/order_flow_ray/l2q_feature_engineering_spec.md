@@ -74,34 +74,44 @@ The `L2QFeatureEngineering` class will process normalized Level 2 Quote data and
 | `volume_weighted_mid_l8` | Volume-weighted mid price level 8 | `mid((BidPrice8 * BidQuantity8 + AskPrice8 * AskQuantity8) / (BidQuantity8 + AskQuantity8))` |
 | `volume_weighted_mid_l9` | Volume-weighted mid price level 9 | `mid((BidPrice9 * BidQuantity9 + AskPrice9 * AskQuantity9) / (BidQuantity9 + AskQuantity9))` |
 | `volume_weighted_mid_l10` | Volume-weighted mid price level 10 | `mid((BidPrice10 * BidQuantity10 + AskPrice10 * AskQuantity10) / (BidQuantity10 + AskQuantity10))` |
-| `spread_bps_l1` | Spread in basis points level 1 | `mid((AskPrice1 - BidPrice1) / ((BidPrice1 + AskPrice1) / 2) * 10000)` |
-| `spread_bps_l2` | Spread in basis points level 2 | `mid((AskPrice2 - BidPrice2) / ((BidPrice2 + AskPrice2) / 2) * 10000)` |
-| `spread_bps_l3` | Spread in basis points level 3 | `mid((AskPrice3 - BidPrice3) / ((BidPrice3 + AskPrice3) / 2) * 10000)` |
-| `spread_bps_l4` | Spread in basis points level 4 | `mid((AskPrice4 - BidPrice4) / ((BidPrice4 + AskPrice4) / 2) * 10000)` |
-| `spread_bps_l5` | Spread in basis points level 5 | `mid((AskPrice5 - BidPrice5) / ((BidPrice5 + AskPrice5) / 2) * 10000)` |
-| `spread_bps_l6` | Spread in basis points level 6 | `mid((AskPrice6 - BidPrice6) / ((BidPrice6 + AskPrice6) / 2) * 10000)` |
-| `spread_bps_l7` | Spread in basis points level 7 | `mid((AskPrice7 - BidPrice7) / ((BidPrice7 + AskPrice7) / 2) * 10000)` |
-| `spread_bps_l8` | Spread in basis points level 8 | `mid((AskPrice8 - BidPrice8) / ((BidPrice8 + AskPrice8) / 2) * 10000)` |
-| `spread_bps_l9` | Spread in basis points level 9 | `mid((AskPrice9 - BidPrice9) / ((BidPrice9 + AskPrice9) / 2) * 10000)` |
-| `spread_bps_l10` | Spread in basis points level 10 | `mid((AskPrice10 - BidPrice10) / ((BidPrice10 + AskPrice10) / 2) * 10000)` |
+| `spread_ratio_l1` | Spread ratio level 1 | `mid((AskPrice1 - BidPrice1) / ((BidPrice1 + AskPrice1) / 2))` |
+| `spread_ratio_l2` | Spread ratio level 2 | `mid((AskPrice2 - BidPrice2) / ((BidPrice2 + AskPrice2) / 2))` |
+| `spread_ratio_l3` | Spread ratio level 3 | `mid((AskPrice3 - BidPrice3) / ((BidPrice3 + AskPrice3) / 2))` |
+| `spread_ratio_l4` | Spread ratio level 4 | `mid((AskPrice4 - BidPrice4) / ((BidPrice4 + AskPrice4) / 2))` |
+| `spread_ratio_l5` | Spread ratio level 5 | `mid((AskPrice5 - BidPrice5) / ((BidPrice5 + AskPrice5) / 2))` |
+| `spread_ratio_l6` | Spread ratio level 6 | `mid((AskPrice6 - BidPrice6) / ((BidPrice6 + AskPrice6) / 2))` |
+| `spread_ratio_l7` | Spread ratio level 7 | `mid((AskPrice7 - BidPrice7) / ((BidPrice7 + AskPrice7) / 2))` |
+| `spread_ratio_l8` | Spread ratio level 8 | `mid((AskPrice8 - BidPrice8) / ((BidPrice8 + AskPrice8) / 2))` |
+| `spread_ratio_l9` | Spread ratio level 9 | `mid((AskPrice9 - BidPrice9) / ((BidPrice9 + AskPrice9) / 2))` |
+| `spread_ratio_l10` | Spread ratio level 10 | `mid((AskPrice10 - BidPrice10) / ((BidPrice10 + AskPrice10) / 2))` |
 
-### 4. Quantity Features (Level 1)
+### 4. Quantity Features
 | Feature | Description | Calculation |
 |---------|-------------|-------------|
-| `bid_quantity_mean` | Average bid quantity | `mean(BidQuantity1)` |
-| `bid_quantity_max` | Maximum bid quantity | `max(BidQuantity1)` |
-| `bid_quantity_min` | Minimum bid quantity | `min(BidQuantity1)` |
-| `ask_quantity_mean` | Average ask quantity | `mean(AskQuantity1)` |
-| `ask_quantity_max` | Maximum ask quantity | `max(AskQuantity1)` |
-| `ask_quantity_min` | Minimum ask quantity | `min(AskQuantity1)` |
+| `quantity_imbalance_l1` | Quantity imbalance level 1 | `mid((AskQuantity1 - BidQuantity1) / (AskQuantity1 + BidQuantity1))` |
+| `quantity_imbalance_l2` | Quantity imbalance level 2 | `mid((AskQuantity2 - BidQuantity2) / (AskQuantity2 + BidQuantity2))` |
+| `quantity_imbalance_l3` | Quantity imbalance level 3 | `mid((AskQuantity3 - BidQuantity3) / (AskQuantity3 + BidQuantity3))` |
+| `quantity_imbalance_l4` | Quantity imbalance level 4 | `mid((AskQuantity4 - BidQuantity4) / (AskQuantity4 + BidQuantity4))` |
+| `quantity_imbalance_l5` | Quantity imbalance level 5 | `mid((AskQuantity5 - BidQuantity5) / (AskQuantity5 + BidQuantity5))` |
+| `quantity_imbalance_l6` | Quantity imbalance level 6 | `mid((AskQuantity6 - BidQuantity6) / (AskQuantity6 + BidQuantity6))` |
+| `quantity_imbalance_l7` | Quantity imbalance level 7 | `mid((AskQuantity7 - BidQuantity7) / (AskQuantity7 + BidQuantity7))` |
+| `quantity_imbalance_l8` | Quantity imbalance level 8 | `mid((AskQuantity8 - BidQuantity8) / (AskQuantity8 + BidQuantity8))` |
+| `quantity_imbalance_l9` | Quantity imbalance level 9 | `mid((AskQuantity9 - BidQuantity9) / (AskQuantity9 + BidQuantity9))` |
+| `quantity_imbalance_l10` | Quantity imbalance level 10 | `mid((AskQuantity10 - BidQuantity10) / (AskQuantity10 + BidQuantity10))` |
 
-### 5. Order Count Features (Level 1)
+### 5. Volume Features
 | Feature | Description | Calculation |
 |---------|-------------|-------------|
-| `bid_orders_mean` | Average bid order count | `mean(BidNumOrders1)` |
-| `bid_orders_max` | Maximum bid order count | `max(BidNumOrders1)` |
-| `ask_orders_mean` | Average ask order count | `mean(AskNumOrders1)` |
-| `ask_orders_max` | Maximum ask order count | `max(AskNumOrders1)` |
+| `volume_imbalance_l1` | Volume imbalance level 1 | `mid((AskPrice1 * AskQuantity1 - BidPrice1 * BidQuantity1) / (AskPrice1 * AskQuantity1 + BidPrice1 * BidQuantity1))` |
+| `volume_imbalance_l2` | Volume imbalance level 2 | `mid((AskPrice2 * AskQuantity2 - BidPrice2 * BidQuantity2) / (AskPrice2 * AskQuantity2 + BidPrice2 * BidQuantity2))` |
+| `volume_imbalance_l3` | Volume imbalance level 3 | `mid((AskPrice3 * AskQuantity3 - BidPrice3 * BidQuantity3) / (AskPrice3 * AskQuantity3 + BidPrice3 * BidQuantity3))` |
+| `volume_imbalance_l4` | Volume imbalance level 4 | `mid((AskPrice4 * AskQuantity4 - BidPrice4 * BidQuantity4) / (AskPrice4 * AskQuantity4 + BidPrice4 * BidQuantity4))` |
+| `volume_imbalance_l5` | Volume imbalance level 5 | `mid((AskPrice5 * AskQuantity5 - BidPrice5 * BidQuantity5) / (AskPrice5 * AskQuantity5 + BidPrice5 * BidQuantity5))` |
+| `volume_imbalance_l6` | Volume imbalance level 6 | `mid((AskPrice6 * AskQuantity6 - BidPrice6 * BidQuantity6) / (AskPrice6 * AskQuantity6 + BidPrice6 * BidQuantity6))` |
+| `volume_imbalance_l7` | Volume imbalance level 7 | `mid((AskPrice7 * AskQuantity7 - BidPrice7 * BidQuantity7) / (AskPrice7 * AskQuantity7 + BidPrice7 * BidQuantity7))` |
+| `volume_imbalance_l8` | Volume imbalance level 8 | `mid((AskPrice8 * AskQuantity8 - BidPrice8 * BidQuantity8) / (AskPrice8 * AskQuantity8 + BidPrice8 * BidQuantity8))` |
+| `volume_imbalance_l9` | Volume imbalance level 9 | `mid((AskPrice9 * AskQuantity9 - BidPrice9 * BidQuantity9) / (AskPrice9 * AskQuantity9 + BidPrice9 * BidQuantity9))` |
+| `volume_imbalance_l10` | Volume imbalance level 10 | `mid((AskPrice10 * AskQuantity10 - BidPrice10 * BidQuantity10) / (AskPrice10 * AskQuantity10 + BidPrice10 * BidQuantity10))` |
 
 ### 6. Imbalance Features
 | Feature | Description | Calculation |

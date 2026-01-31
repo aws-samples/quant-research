@@ -55,74 +55,77 @@ class L2QFeatureEngineering(FeatureEngineering):
             pl.col('TimestampNanoseconds').count().alias('quote_count'),
             
             # Bid update counts (levels 1-10): price_change + quantity_change + orders_change
-            ((pl.col('BidPrice1').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('BidQuantity1').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('BidNumOrders1').diff().abs() > 0).cast(pl.Int32)).sum().alias('bid_update_count_l1'),
-            ((pl.col('BidPrice2').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('BidQuantity2').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('BidNumOrders2').diff().abs() > 0).cast(pl.Int32)).sum().alias('bid_update_count_l2'),
-            ((pl.col('BidPrice3').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('BidQuantity3').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('BidNumOrders3').diff().abs() > 0).cast(pl.Int32)).sum().alias('bid_update_count_l3'),
-            ((pl.col('BidPrice4').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('BidQuantity4').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('BidNumOrders4').diff().abs() > 0).cast(pl.Int32)).sum().alias('bid_update_count_l4'),
-            ((pl.col('BidPrice5').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('BidQuantity5').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('BidNumOrders5').diff().abs() > 0).cast(pl.Int32)).sum().alias('bid_update_count_l5'),
-            ((pl.col('BidPrice6').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('BidQuantity6').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('BidNumOrders6').diff().abs() > 0).cast(pl.Int32)).sum().alias('bid_update_count_l6'),
-            ((pl.col('BidPrice7').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('BidQuantity7').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('BidNumOrders7').diff().abs() > 0).cast(pl.Int32)).sum().alias('bid_update_count_l7'),
-            ((pl.col('BidPrice8').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('BidQuantity8').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('BidNumOrders8').diff().abs() > 0).cast(pl.Int32)).sum().alias('bid_update_count_l8'),
-            ((pl.col('BidPrice9').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('BidQuantity9').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('BidNumOrders9').diff().abs() > 0).cast(pl.Int32)).sum().alias('bid_update_count_l9'),
-            ((pl.col('BidPrice10').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('BidQuantity10').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('BidNumOrders10').diff().abs() > 0).cast(pl.Int32)).sum().alias('bid_update_count_l10'),
+            ((pl.col('BidPrice1') != pl.col('BidPrice1').shift(1)).cast(pl.Int32) + 
+             (pl.col('BidQuantity1') != pl.col('BidQuantity1').shift(1)).cast(pl.Int32) + 
+             (pl.col('BidNumOrders1') != pl.col('BidNumOrders1').shift(1)).cast(pl.Int32)).sum().alias('bid_update_count_l1'),
+            ((pl.col('BidPrice2') != pl.col('BidPrice2').shift(1)).cast(pl.Int32) + 
+             (pl.col('BidQuantity2') != pl.col('BidQuantity2').shift(1)).cast(pl.Int32) + 
+             (pl.col('BidNumOrders2') != pl.col('BidNumOrders2').shift(1)).cast(pl.Int32)).sum().alias('bid_update_count_l2'),
+            ((pl.col('BidPrice3') != pl.col('BidPrice3').shift(1)).cast(pl.Int32) + 
+             (pl.col('BidQuantity3') != pl.col('BidQuantity3').shift(1)).cast(pl.Int32) + 
+             (pl.col('BidNumOrders3') != pl.col('BidNumOrders3').shift(1)).cast(pl.Int32)).sum().alias('bid_update_count_l3'),
+            ((pl.col('BidPrice4') != pl.col('BidPrice4').shift(1)).cast(pl.Int32) + 
+             (pl.col('BidQuantity4') != pl.col('BidQuantity4').shift(1)).cast(pl.Int32) + 
+             (pl.col('BidNumOrders4') != pl.col('BidNumOrders4').shift(1)).cast(pl.Int32)).sum().alias('bid_update_count_l4'),
+            ((pl.col('BidPrice5') != pl.col('BidPrice5').shift(1)).cast(pl.Int32) + 
+             (pl.col('BidQuantity5') != pl.col('BidQuantity5').shift(1)).cast(pl.Int32) + 
+             (pl.col('BidNumOrders5') != pl.col('BidNumOrders5').shift(1)).cast(pl.Int32)).sum().alias('bid_update_count_l5'),
+            ((pl.col('BidPrice6') != pl.col('BidPrice6').shift(1)).cast(pl.Int32) + 
+             (pl.col('BidQuantity6') != pl.col('BidQuantity6').shift(1)).cast(pl.Int32) + 
+             (pl.col('BidNumOrders6') != pl.col('BidNumOrders6').shift(1)).cast(pl.Int32)).sum().alias('bid_update_count_l6'),
+            ((pl.col('BidPrice7') != pl.col('BidPrice7').shift(1)).cast(pl.Int32) + 
+             (pl.col('BidQuantity7') != pl.col('BidQuantity7').shift(1)).cast(pl.Int32) + 
+             (pl.col('BidNumOrders7') != pl.col('BidNumOrders7').shift(1)).cast(pl.Int32)).sum().alias('bid_update_count_l7'),
+            ((pl.col('BidPrice8') != pl.col('BidPrice8').shift(1)).cast(pl.Int32) + 
+             (pl.col('BidQuantity8') != pl.col('BidQuantity8').shift(1)).cast(pl.Int32) + 
+             (pl.col('BidNumOrders8') != pl.col('BidNumOrders8').shift(1)).cast(pl.Int32)).sum().alias('bid_update_count_l8'),
+            ((pl.col('BidPrice9') != pl.col('BidPrice9').shift(1)).cast(pl.Int32) + 
+             (pl.col('BidQuantity9') != pl.col('BidQuantity9').shift(1)).cast(pl.Int32) + 
+             (pl.col('BidNumOrders9') != pl.col('BidNumOrders9').shift(1)).cast(pl.Int32)).sum().alias('bid_update_count_l9'),
+            ((pl.col('BidPrice10') != pl.col('BidPrice10').shift(1)).cast(pl.Int32) + 
+             (pl.col('BidQuantity10') != pl.col('BidQuantity10').shift(1)).cast(pl.Int32) + 
+             (pl.col('BidNumOrders10') != pl.col('BidNumOrders10').shift(1)).cast(pl.Int32)).sum().alias('bid_update_count_l10'),
             
             # Ask update counts (levels 1-10): price_change + quantity_change + orders_change
-            ((pl.col('AskPrice1').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('AskQuantity1').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('AskNumOrders1').diff().abs() > 0).cast(pl.Int32)).sum().alias('ask_update_count_l1'),
-            ((pl.col('AskPrice2').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('AskQuantity2').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('AskNumOrders2').diff().abs() > 0).cast(pl.Int32)).sum().alias('ask_update_count_l2'),
-            ((pl.col('AskPrice3').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('AskQuantity3').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('AskNumOrders3').diff().abs() > 0).cast(pl.Int32)).sum().alias('ask_update_count_l3'),
-            ((pl.col('AskPrice4').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('AskQuantity4').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('AskNumOrders4').diff().abs() > 0).cast(pl.Int32)).sum().alias('ask_update_count_l4'),
-            ((pl.col('AskPrice5').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('AskQuantity5').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('AskNumOrders5').diff().abs() > 0).cast(pl.Int32)).sum().alias('ask_update_count_l5'),
-            ((pl.col('AskPrice6').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('AskQuantity6').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('AskNumOrders6').diff().abs() > 0).cast(pl.Int32)).sum().alias('ask_update_count_l6'),
-            ((pl.col('AskPrice7').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('AskQuantity7').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('AskNumOrders7').diff().abs() > 0).cast(pl.Int32)).sum().alias('ask_update_count_l7'),
-            ((pl.col('AskPrice8').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('AskQuantity8').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('AskNumOrders8').diff().abs() > 0).cast(pl.Int32)).sum().alias('ask_update_count_l8'),
-            ((pl.col('AskPrice9').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('AskQuantity9').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('AskNumOrders9').diff().abs() > 0).cast(pl.Int32)).sum().alias('ask_update_count_l9'),
-            ((pl.col('AskPrice10').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('AskQuantity10').diff().abs() > 0).cast(pl.Int32) + 
-             (pl.col('AskNumOrders10').diff().abs() > 0).cast(pl.Int32)).sum().alias('ask_update_count_l10')
+            ((pl.col('AskPrice1') != pl.col('AskPrice1').shift(1)).cast(pl.Int32) + 
+             (pl.col('AskQuantity1') != pl.col('AskQuantity1').shift(1)).cast(pl.Int32) + 
+             (pl.col('AskNumOrders1') != pl.col('AskNumOrders1').shift(1)).cast(pl.Int32)).sum().alias('ask_update_count_l1'),
+            ((pl.col('AskPrice2') != pl.col('AskPrice2').shift(1)).cast(pl.Int32) + 
+             (pl.col('AskQuantity2') != pl.col('AskQuantity2').shift(1)).cast(pl.Int32) + 
+             (pl.col('AskNumOrders2') != pl.col('AskNumOrders2').shift(1)).cast(pl.Int32)).sum().alias('ask_update_count_l2'),
+            ((pl.col('AskPrice3') != pl.col('AskPrice3').shift(1)).cast(pl.Int32) + 
+             (pl.col('AskQuantity3') != pl.col('AskQuantity3').shift(1)).cast(pl.Int32) + 
+             (pl.col('AskNumOrders3') != pl.col('AskNumOrders3').shift(1)).cast(pl.Int32)).sum().alias('ask_update_count_l3'),
+            ((pl.col('AskPrice4') != pl.col('AskPrice4').shift(1)).cast(pl.Int32) + 
+             (pl.col('AskQuantity4') != pl.col('AskQuantity4').shift(1)).cast(pl.Int32) + 
+             (pl.col('AskNumOrders4') != pl.col('AskNumOrders4').shift(1)).cast(pl.Int32)).sum().alias('ask_update_count_l4'),
+            ((pl.col('AskPrice5') != pl.col('AskPrice5').shift(1)).cast(pl.Int32) + 
+             (pl.col('AskQuantity5') != pl.col('AskQuantity5').shift(1)).cast(pl.Int32) + 
+             (pl.col('AskNumOrders5') != pl.col('AskNumOrders5').shift(1)).cast(pl.Int32)).sum().alias('ask_update_count_l5'),
+            ((pl.col('AskPrice6') != pl.col('AskPrice6').shift(1)).cast(pl.Int32) + 
+             (pl.col('AskQuantity6') != pl.col('AskQuantity6').shift(1)).cast(pl.Int32) + 
+             (pl.col('AskNumOrders6') != pl.col('AskNumOrders6').shift(1)).cast(pl.Int32)).sum().alias('ask_update_count_l6'),
+            ((pl.col('AskPrice7') != pl.col('AskPrice7').shift(1)).cast(pl.Int32) + 
+             (pl.col('AskQuantity7') != pl.col('AskQuantity7').shift(1)).cast(pl.Int32) + 
+             (pl.col('AskNumOrders7') != pl.col('AskNumOrders7').shift(1)).cast(pl.Int32)).sum().alias('ask_update_count_l7'),
+            ((pl.col('AskPrice8') != pl.col('AskPrice8').shift(1)).cast(pl.Int32) + 
+             (pl.col('AskQuantity8') != pl.col('AskQuantity8').shift(1)).cast(pl.Int32) + 
+             (pl.col('AskNumOrders8') != pl.col('AskNumOrders8').shift(1)).cast(pl.Int32)).sum().alias('ask_update_count_l8'),
+            ((pl.col('AskPrice9') != pl.col('AskPrice9').shift(1)).cast(pl.Int32) + 
+             (pl.col('AskQuantity9') != pl.col('AskQuantity9').shift(1)).cast(pl.Int32) + 
+             (pl.col('AskNumOrders9') != pl.col('AskNumOrders9').shift(1)).cast(pl.Int32)).sum().alias('ask_update_count_l9'),
+            ((pl.col('AskPrice10') != pl.col('AskPrice10').shift(1)).cast(pl.Int32) + 
+             (pl.col('AskQuantity10') != pl.col('AskQuantity10').shift(1)).cast(pl.Int32) + 
+             (pl.col('AskNumOrders10') != pl.col('AskNumOrders10').shift(1)).cast(pl.Int32)).sum().alias('ask_update_count_l10')
         ]
     
     def feature_computation(self, data: pl.LazyFrame) -> pl.LazyFrame:
         """L2Q feature computation pipeline."""
         # Add bar_id and bar_id_dt
         df = TimeBarFeatureEngineering.bar_time_addition(data, 'TimestampNanoseconds', self.bar_duration_ms)
+        
+        # Sort by grouping keys and timestamp to ensure proper shift() order
+        df = df.sort(['TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker', 'TimestampNanoseconds'])
         
         # Build feature pipeline
         pipeline = {

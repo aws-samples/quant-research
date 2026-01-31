@@ -28,6 +28,22 @@ scipy>=1.11.0
 scikit-learn>=1.3.0
 xgboost>=2.0.0
 
+# Chronos-2 time series forecasting with native covariate support
+# Model: amazon/chronos-2 (120M encoder-only)
+chronos-forecasting>=1.4.0
+
+# PyTorch ecosystem for Chronos
+torch>=2.0.0
+transformers>=4.30.0
+accelerate>=0.20.0
+
+# Ray Train for distributed training
+ray[train,tune]>=2.9.0
+
+# Training utilities
+datasets>=2.14.0
+tensorboard>=2.14.0
+
 # Utilities
 pydantic>=2.5.0
 click>=8.1.0

@@ -61,6 +61,7 @@ class RegressionTestSuite:
         tests = [
             ('test_base.py', 'Base Feature Engineering Tests'),
             ('l2_feed/test_l2_bar_creation.py', 'L2Q Bar Creation Tests'),
+            ('l2_feed/test_l2q_feature_accuracy.py', 'L2Q Sections 1&2 Feature Accuracy Tests'),
             ('trade_feed/test_aggregation_validation.py', 'Trade Aggregation Validation Tests')
         ]
         

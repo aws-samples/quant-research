@@ -39,34 +39,104 @@ class FeatureEngineering(ABC):
 class L2QFeatureEngineering(FeatureEngineering):
     """Feature engineering for Level 2 Quote data."""
     
-    def feature_computation(self, data: pl.LazyFrame) -> pl.LazyFrame:
-        """L2Q feature computation with bar aggregation."""
-        # Add bar_id using TimeBarFeatureEngineering
-        df = TimeBarFeatureEngineering.bar_time_addition(data, 'TimestampNanoseconds', self.bar_duration_ms)
-        
-        # Group by bar and compute L2Q features
-        return df.group_by(['bar_id', 'Ticker', 'ISOExchangeCode']).agg([
-            # Timestamp features
-            pl.col('TimestampNanoseconds').min().alias('bar_start_ns'),
-            pl.col('TimestampNanoseconds').max().alias('bar_end_ns'),
+    def _section1_bar_metadata(self, df: pl.LazyFrame) -> List[pl.Expr]:
+        """Section 1: Bar Metadata Features."""
+        return [
+            pl.col('bar_id_dt').first().alias('bar_id_dt'),
+            pl.col('bar_duration_ms').first().alias('bar_duration_ms'),
+            pl.col('MarketState').mode().first().alias('market_state_mode')
+        ]
+    
+    def _section2_quote_activity(self, df: pl.LazyFrame) -> List[pl.Expr]:
+        """Section 2: Quote Activity Features."""
+        return [
+            pl.col('TimestampNanoseconds').min().alias('bar_start_dt'),
+            pl.col('TimestampNanoseconds').max().alias('bar_end_dt'),
             pl.col('TimestampNanoseconds').count().alias('quote_count'),
             
-            # Bid features
-            pl.col('BidPrice1').mean().alias('bid_price_mean'),
-            pl.col('BidPrice1').first().alias('bid_price_open'),
-            pl.col('BidPrice1').last().alias('bid_price_close'),
-            pl.col('BidQuantity1').mean().alias('bid_quantity_mean'),
+            # Bid update counts (levels 1-10): price_change + quantity_change + orders_change
+            ((pl.col('BidPrice1').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('BidQuantity1').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('BidNumOrders1').diff().abs() > 0).cast(pl.Int32)).sum().alias('bid_update_count_l1'),
+            ((pl.col('BidPrice2').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('BidQuantity2').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('BidNumOrders2').diff().abs() > 0).cast(pl.Int32)).sum().alias('bid_update_count_l2'),
+            ((pl.col('BidPrice3').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('BidQuantity3').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('BidNumOrders3').diff().abs() > 0).cast(pl.Int32)).sum().alias('bid_update_count_l3'),
+            ((pl.col('BidPrice4').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('BidQuantity4').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('BidNumOrders4').diff().abs() > 0).cast(pl.Int32)).sum().alias('bid_update_count_l4'),
+            ((pl.col('BidPrice5').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('BidQuantity5').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('BidNumOrders5').diff().abs() > 0).cast(pl.Int32)).sum().alias('bid_update_count_l5'),
+            ((pl.col('BidPrice6').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('BidQuantity6').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('BidNumOrders6').diff().abs() > 0).cast(pl.Int32)).sum().alias('bid_update_count_l6'),
+            ((pl.col('BidPrice7').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('BidQuantity7').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('BidNumOrders7').diff().abs() > 0).cast(pl.Int32)).sum().alias('bid_update_count_l7'),
+            ((pl.col('BidPrice8').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('BidQuantity8').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('BidNumOrders8').diff().abs() > 0).cast(pl.Int32)).sum().alias('bid_update_count_l8'),
+            ((pl.col('BidPrice9').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('BidQuantity9').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('BidNumOrders9').diff().abs() > 0).cast(pl.Int32)).sum().alias('bid_update_count_l9'),
+            ((pl.col('BidPrice10').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('BidQuantity10').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('BidNumOrders10').diff().abs() > 0).cast(pl.Int32)).sum().alias('bid_update_count_l10'),
             
-            # Ask features  
-            pl.col('AskPrice1').mean().alias('ask_price_mean'),
-            pl.col('AskPrice1').first().alias('ask_price_open'),
-            pl.col('AskPrice1').last().alias('ask_price_close'),
-            pl.col('AskQuantity1').mean().alias('ask_quantity_mean'),
-            
-            # Spread features
-            (pl.col('AskPrice1') - pl.col('BidPrice1')).mean().alias('spread_mean'),
-            (pl.col('BidQuantity1') - pl.col('AskQuantity1')).mean().alias('quantity_imbalance_mean')
-        ])
+            # Ask update counts (levels 1-10): price_change + quantity_change + orders_change
+            ((pl.col('AskPrice1').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('AskQuantity1').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('AskNumOrders1').diff().abs() > 0).cast(pl.Int32)).sum().alias('ask_update_count_l1'),
+            ((pl.col('AskPrice2').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('AskQuantity2').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('AskNumOrders2').diff().abs() > 0).cast(pl.Int32)).sum().alias('ask_update_count_l2'),
+            ((pl.col('AskPrice3').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('AskQuantity3').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('AskNumOrders3').diff().abs() > 0).cast(pl.Int32)).sum().alias('ask_update_count_l3'),
+            ((pl.col('AskPrice4').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('AskQuantity4').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('AskNumOrders4').diff().abs() > 0).cast(pl.Int32)).sum().alias('ask_update_count_l4'),
+            ((pl.col('AskPrice5').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('AskQuantity5').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('AskNumOrders5').diff().abs() > 0).cast(pl.Int32)).sum().alias('ask_update_count_l5'),
+            ((pl.col('AskPrice6').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('AskQuantity6').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('AskNumOrders6').diff().abs() > 0).cast(pl.Int32)).sum().alias('ask_update_count_l6'),
+            ((pl.col('AskPrice7').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('AskQuantity7').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('AskNumOrders7').diff().abs() > 0).cast(pl.Int32)).sum().alias('ask_update_count_l7'),
+            ((pl.col('AskPrice8').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('AskQuantity8').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('AskNumOrders8').diff().abs() > 0).cast(pl.Int32)).sum().alias('ask_update_count_l8'),
+            ((pl.col('AskPrice9').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('AskQuantity9').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('AskNumOrders9').diff().abs() > 0).cast(pl.Int32)).sum().alias('ask_update_count_l9'),
+            ((pl.col('AskPrice10').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('AskQuantity10').diff().abs() > 0).cast(pl.Int32) + 
+             (pl.col('AskNumOrders10').diff().abs() > 0).cast(pl.Int32)).sum().alias('ask_update_count_l10')
+        ]
+    
+    def feature_computation(self, data: pl.LazyFrame) -> pl.LazyFrame:
+        """L2Q feature computation pipeline."""
+        # Add bar_id and bar_id_dt
+        df = TimeBarFeatureEngineering.bar_time_addition(data, 'TimestampNanoseconds', self.bar_duration_ms)
+        
+        # Build feature pipeline
+        pipeline = {
+            'section1': self._section1_bar_metadata(df),
+            'section2': self._section2_quote_activity(df)
+        }
+        
+        # Flatten all features
+        features = []
+        for section, exprs in pipeline.items():
+            features.extend(exprs)
+        
+        # Group by bar and compute all features
+        return df.group_by(['bar_id', 'TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker']).agg(features)
     
     def failure_extraction(self, results: List[Any]) -> List[Any]:
         """Failed L2Q item extraction."""

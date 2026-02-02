@@ -10,7 +10,7 @@ from feature_engineering import L2QFeatureEngineering
 def main():
     # Load test data
     input_file = '/Users/blitvin/IdeaProjects/quant-research-sample-using-amazon-ecs-and-aws-batch/samples/order_flow_ray/src/tests/feature_engineering/l2_feed/test_data/raw_l2q_high_activity_periods.csv'
-    output_file = '/Users/blitvin/IdeaProjects/quant-research-sample-using-amazon-ecs-and-aws-batch/samples/order_flow_ray/src/tests/feature_engineering/l2_feed/output_data/l2q_features_sections_1_2_3_4_5_250ms.csv'
+    output_file = '/Users/blitvin/IdeaProjects/quant-research-sample-using-amazon-ecs-and-aws-batch/samples/order_flow_ray/src/tests/feature_engineering/l2_feed/output_data/l2q_features_sections_1_2_3_4_5_6_7_8_250ms.csv'
     
     print(f"Loading data from: {input_file}")
     

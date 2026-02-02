@@ -119,6 +119,67 @@ class L2QFeatureEngineering(FeatureEngineering):
              (pl.col('AskNumOrders10') != pl.col('AskNumOrders10').shift(1)).cast(pl.Int32)).sum().alias('ask_update_count_l10')
         ]
     
+    def _section3_spread_features(self, df: pl.LazyFrame) -> List[pl.Expr]:
+        """Section 3: Spread Features."""
+        features = []
+        
+        # Volume-weighted mid prices and spread ratios for levels 1-10
+        for level in range(1, 11):
+            bid_price = f'BidPrice{level}'
+            ask_price = f'AskPrice{level}'
+            bid_qty = f'BidQuantity{level}'
+            ask_qty = f'AskQuantity{level}'
+            
+            # Volume-weighted mid price
+            features.append(
+                ((pl.col(bid_price) * pl.col(bid_qty) + pl.col(ask_price) * pl.col(ask_qty)) / 
+                 (pl.col(bid_qty) + pl.col(ask_qty))).median().alias(f'volume_weighted_mid_l{level}')
+            )
+            
+            # Spread ratio
+            features.append(
+                ((pl.col(ask_price) - pl.col(bid_price)) / 
+                 ((pl.col(bid_price) + pl.col(ask_price)) / 2)).median().alias(f'spread_ratio_l{level}')
+            )
+        
+        return features
+    
+    def _section4_quantity_features(self, df: pl.LazyFrame) -> List[pl.Expr]:
+        """Section 4: Quantity Features."""
+        features = []
+        
+        # Quantity imbalance for levels 1-10
+        for level in range(1, 11):
+            bid_qty = f'BidQuantity{level}'
+            ask_qty = f'AskQuantity{level}'
+            
+            # Quantity imbalance: (BidQuantity - AskQuantity) / (BidQuantity + AskQuantity)
+            features.append(
+                ((pl.col(bid_qty) - pl.col(ask_qty)) / 
+                 (pl.col(bid_qty) + pl.col(ask_qty))).median().alias(f'quantity_imbalance_l{level}')
+            )
+        
+        return features
+    
+    def _section5_volume_features(self, df: pl.LazyFrame) -> List[pl.Expr]:
+        """Section 5: Volume Features."""
+        features = []
+        
+        # Volume imbalance for levels 1-10
+        for level in range(1, 11):
+            bid_price = f'BidPrice{level}'
+            ask_price = f'AskPrice{level}'
+            bid_qty = f'BidQuantity{level}'
+            ask_qty = f'AskQuantity{level}'
+            
+            # Volume imbalance: (BidPrice * BidQuantity - AskPrice * AskQuantity) / (BidPrice * BidQuantity + AskPrice * AskQuantity)
+            features.append(
+                ((pl.col(bid_price) * pl.col(bid_qty) - pl.col(ask_price) * pl.col(ask_qty)) / 
+                 (pl.col(bid_price) * pl.col(bid_qty) + pl.col(ask_price) * pl.col(ask_qty))).median().alias(f'volume_imbalance_l{level}')
+            )
+        
+        return features
+    
     def feature_computation(self, data: pl.LazyFrame) -> pl.LazyFrame:
         """L2Q feature computation pipeline."""
         # Add bar_id and bar_id_dt
@@ -130,7 +191,10 @@ class L2QFeatureEngineering(FeatureEngineering):
         # Build feature pipeline
         pipeline = {
             'section1': self._section1_bar_metadata(df),
-            'section2': self._section2_quote_activity(df)
+            'section2': self._section2_quote_activity(df),
+            'section3': self._section3_spread_features(df),
+            'section4': self._section4_quantity_features(df),
+            'section5': self._section5_volume_features(df)
         }
         
         # Flatten all features

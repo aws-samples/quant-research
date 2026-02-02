@@ -325,9 +325,65 @@ class Pipeline:
     def _training_step(self, data: Any) -> Any:
         """Execute training step."""
         training = self.config.processing.training
-        # TODO: Implement training
-        print("Training not yet implemented")
-        return data
+        if not training:
+            return data
+
+        print("\n" + "=" * 80)
+        print("TRAINING STEP")
+        print("=" * 80)
+
+        # Convert feature engineering results to LazyFrame if needed
+        if isinstance(data, list):
+            # Data is list of file result dicts from feature engineering
+            features = self._load_feature_files(data)
+        else:
+            # Data is already a LazyFrame
+            features = data
+
+        # Get model storage location
+        model_storage = self.config.storage.models
+        storage_dict = {
+            'access_type': model_storage.get_access_type(),
+            'path': model_storage.get_path()
+        }
+
+        if model_storage.get_access_type() == 's3tables':
+            storage_dict['table_bucket_arn'] = model_storage.table_bucket_arn
+            storage_dict['namespace'] = model_storage.namespace
+
+        # Train model (may take days)
+        training_result = training.train(features, storage_dict)
+
+        # Return training result for downstream steps (inference)
+        return training_result
+
+    def _load_feature_files(self, file_results: list) -> pl.LazyFrame:
+        """Load feature files from list of file results.
+
+        Args:
+            file_results: List of dicts with 'path' keys
+
+        Returns:
+            Combined LazyFrame of all features
+        """
+        import boto3
+
+        # Get storage options for S3
+        session = boto3.Session(profile_name=self.config.profile_name)
+        credentials = session.get_credentials()
+
+        storage_options = {
+            "aws_region": self.config.region,
+            "aws_access_key_id": credentials.access_key,
+            "aws_secret_access_key": credentials.secret_key
+        }
+
+        if credentials.token:
+            storage_options["aws_session_token"] = credentials.token
+
+        # Load all feature files
+        paths = [result['path'] for result in file_results]
+        return pl.scan_parquet(paths, storage_options=storage_options)
     
     def _inference_step(self, data: Any) -> Any:
         """Execute inference step."""

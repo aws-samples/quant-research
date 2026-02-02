@@ -39,6 +39,41 @@ class FeatureEngineering(ABC):
 class L2QFeatureEngineering(FeatureEngineering):
     """Feature engineering for Level 2 Quote data."""
     
+    def _slope(self, y_col: str, x_col: str = 'TimestampNanoseconds') -> pl.Expr:
+        """Calculate slope using linear regression."""
+        # Convert nanoseconds to seconds for numerical stability
+        x = pl.col(x_col) / 1e9
+        y = pl.col(y_col)
+        
+        # Calculate slope: (n*Σxy - ΣxΣy) / (n*Σx² - (Σx)²)
+        n = pl.len()
+        sum_x = x.sum()
+        sum_y = y.sum()
+        sum_xy = (x * y).sum()
+        sum_x2 = (x * x).sum()
+        
+        return (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x)
+    
+    def _mse_trend(self, y_col: str, x_col: str = 'TimestampNanoseconds') -> pl.Expr:
+        """Calculate MSE from linear trend."""
+        # Convert nanoseconds to seconds for numerical stability
+        x = pl.col(x_col) / 1e9
+        y = pl.col(y_col)
+        
+        # Calculate linear regression coefficients
+        n = pl.len()
+        sum_x = x.sum()
+        sum_y = y.sum()
+        sum_xy = (x * y).sum()
+        sum_x2 = (x * x).sum()
+        
+        slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x)
+        intercept = (sum_y - slope * sum_x) / n
+        
+        # Calculate MSE: mean((y - (slope*x + intercept))²)
+        predicted = slope * x + intercept
+        return ((y - predicted) ** 2).mean()
+    
     def _section1_bar_metadata(self, df: pl.LazyFrame) -> List[pl.Expr]:
         """Section 1: Bar Metadata Features."""
         return [
@@ -180,6 +215,217 @@ class L2QFeatureEngineering(FeatureEngineering):
         
         return features
     
+    def _section6_volatility_features(self, df: pl.LazyFrame) -> List[pl.Expr]:
+        """Section 6: Volatility Features."""
+        features = []
+        
+        # Bid/Ask/Mid price volatility for levels 1-10
+        for level in range(1, 11):
+            bid_price = f'BidPrice{level}'
+            ask_price = f'AskPrice{level}'
+            bid_qty = f'BidQuantity{level}'
+            ask_qty = f'AskQuantity{level}'
+            
+            # Bid price volatility: stdev(BidPrice) / median(BidPrice)
+            features.append(
+                (pl.col(bid_price).std() / pl.col(bid_price).median()).alias(f'bid_price_volatility_l{level}')
+            )
+            
+            # Ask price volatility: stdev(AskPrice) / median(AskPrice)
+            features.append(
+                (pl.col(ask_price).std() / pl.col(ask_price).median()).alias(f'ask_price_volatility_l{level}')
+            )
+            
+            # Mid price volatility: stdev((BidPrice + AskPrice) / 2) / median((BidPrice + AskPrice) / 2)
+            mid_price = (pl.col(bid_price) + pl.col(ask_price)) / 2
+            features.append(
+                (mid_price.std() / mid_price.median()).alias(f'mid_price_volatility_l{level}')
+            )
+            
+            # Bid quantity volatility: stdev(BidQuantity) / median(BidQuantity)
+            features.append(
+                (pl.col(bid_qty).std() / pl.col(bid_qty).median()).alias(f'bid_quantity_volatility_l{level}')
+            )
+            
+            # Ask quantity volatility: stdev(AskQuantity) / median(AskQuantity)
+            features.append(
+                (pl.col(ask_qty).std() / pl.col(ask_qty).median()).alias(f'ask_quantity_volatility_l{level}')
+            )
+            
+            # Bid volume volatility: stdev(BidPrice * BidQuantity) / median(BidPrice * BidQuantity)
+            bid_volume = pl.col(bid_price) * pl.col(bid_qty)
+            features.append(
+                (bid_volume.std() / bid_volume.median()).alias(f'bid_volume_volatility_l{level}')
+            )
+            
+            # Ask volume volatility: stdev(AskPrice * AskQuantity) / median(AskPrice * AskQuantity)
+            ask_volume = pl.col(ask_price) * pl.col(ask_qty)
+            features.append(
+                (ask_volume.std() / ask_volume.median()).alias(f'ask_volume_volatility_l{level}')
+            )
+        
+        return features
+    
+    def _section7_trend_features(self, df: pl.LazyFrame) -> List[pl.Expr]:
+        """Section 7: Trend Features."""
+        features = []
+        
+        # Bid/Ask/Mid price trends, quantity trends, volume trends for levels 1-10
+        for level in range(1, 11):
+            bid_price = f'BidPrice{level}'
+            ask_price = f'AskPrice{level}'
+            bid_qty = f'BidQuantity{level}'
+            ask_qty = f'AskQuantity{level}'
+            
+            # Bid price trend: slope(BidPrice ORDER BY TimestampNanoseconds)
+            features.append(
+                self._slope(bid_price).alias(f'bid_price_trend_l{level}')
+            )
+            
+            # Ask price trend: slope(AskPrice ORDER BY TimestampNanoseconds)
+            features.append(
+                self._slope(ask_price).alias(f'ask_price_trend_l{level}')
+            )
+            
+            # Mid price trend: slope((BidPrice + AskPrice) / 2 ORDER BY TimestampNanoseconds)
+            # Calculate mid price first, then slope
+            features.append(
+                self._slope_mid_price(bid_price, ask_price).alias(f'mid_price_trend_l{level}')
+            )
+            
+            # Bid quantity trend: slope(BidQuantity ORDER BY TimestampNanoseconds)
+            features.append(
+                self._slope(bid_qty).alias(f'bid_quantity_trend_l{level}')
+            )
+            
+            # Ask quantity trend: slope(AskQuantity ORDER BY TimestampNanoseconds)
+            features.append(
+                self._slope(ask_qty).alias(f'ask_quantity_trend_l{level}')
+            )
+            
+            # Bid volume trend: slope(BidPrice * BidQuantity ORDER BY TimestampNanoseconds)
+            features.append(
+                self._slope_product(bid_price, bid_qty).alias(f'bid_volume_trend_l{level}')
+            )
+            
+            # Ask volume trend: slope(AskPrice * AskQuantity ORDER BY TimestampNanoseconds)
+            features.append(
+                self._slope_product(ask_price, ask_qty).alias(f'ask_volume_trend_l{level}')
+            )
+        
+        return features
+    
+    def _section8_trend_vol_features(self, df: pl.LazyFrame) -> List[pl.Expr]:
+        """Section 8: Trend Vol Features."""
+        features = []
+        
+        # Trend volatility (MSE) for bid/ask/mid prices, quantities, volumes for levels 1-10
+        for level in range(1, 11):
+            bid_price = f'BidPrice{level}'
+            ask_price = f'AskPrice{level}'
+            bid_qty = f'BidQuantity{level}'
+            ask_qty = f'AskQuantity{level}'
+            
+            # Bid price trend volatility: mse(BidPrice ORDER BY TimestampNanoseconds) / median(BidPrice)
+            features.append(
+                (self._mse_trend(bid_price) / pl.col(bid_price).median()).alias(f'bid_price_trend_vol_l{level}')
+            )
+            
+            # Ask price trend volatility: mse(AskPrice ORDER BY TimestampNanoseconds) / median(AskPrice)
+            features.append(
+                (self._mse_trend(ask_price) / pl.col(ask_price).median()).alias(f'ask_price_trend_vol_l{level}')
+            )
+            
+            # Mid price trend volatility: mse((BidPrice + AskPrice) / 2 ORDER BY TimestampNanoseconds) / median((BidPrice + AskPrice) / 2)
+            mid_price = (pl.col(bid_price) + pl.col(ask_price)) / 2
+            features.append(
+                (self._mse_trend_mid_price(bid_price, ask_price) / mid_price.median()).alias(f'mid_price_trend_vol_l{level}')
+            )
+            
+            # Bid quantity trend volatility: mse(BidQuantity ORDER BY TimestampNanoseconds) / median(BidQuantity)
+            features.append(
+                (self._mse_trend(bid_qty) / pl.col(bid_qty).median()).alias(f'bid_quantity_trend_vol_l{level}')
+            )
+            
+            # Ask quantity trend volatility: mse(AskQuantity ORDER BY TimestampNanoseconds) / median(AskQuantity)
+            features.append(
+                (self._mse_trend(ask_qty) / pl.col(ask_qty).median()).alias(f'ask_quantity_trend_vol_l{level}')
+            )
+            
+            # Bid volume trend volatility: mse(BidPrice * BidQuantity ORDER BY TimestampNanoseconds) / median(BidPrice * BidQuantity)
+            bid_volume = pl.col(bid_price) * pl.col(bid_qty)
+            features.append(
+                (self._mse_trend_product(bid_price, bid_qty) / bid_volume.median()).alias(f'bid_volume_trend_vol_l{level}')
+            )
+            
+            # Ask volume trend volatility: mse(AskPrice * AskQuantity ORDER BY TimestampNanoseconds) / median(AskPrice * AskQuantity)
+            ask_volume = pl.col(ask_price) * pl.col(ask_qty)
+            features.append(
+                (self._mse_trend_product(ask_price, ask_qty) / ask_volume.median()).alias(f'ask_volume_trend_vol_l{level}')
+            )
+        
+        return features
+    
+    def _slope_mid_price(self, bid_col: str, ask_col: str, x_col: str = 'TimestampNanoseconds') -> pl.Expr:
+        """Calculate slope for mid price."""
+        x = pl.col(x_col) / 1e9
+        y = (pl.col(bid_col) + pl.col(ask_col)) / 2
+        
+        n = pl.len()
+        sum_x = x.sum()
+        sum_y = y.sum()
+        sum_xy = (x * y).sum()
+        sum_x2 = (x * x).sum()
+        
+        return (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x)
+    
+    def _slope_product(self, col1: str, col2: str, x_col: str = 'TimestampNanoseconds') -> pl.Expr:
+        """Calculate slope for product of two columns."""
+        x = pl.col(x_col) / 1e9
+        y = pl.col(col1) * pl.col(col2)
+        
+        n = pl.len()
+        sum_x = x.sum()
+        sum_y = y.sum()
+        sum_xy = (x * y).sum()
+        sum_x2 = (x * x).sum()
+        
+        return (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x)
+    
+    def _mse_trend_mid_price(self, bid_col: str, ask_col: str, x_col: str = 'TimestampNanoseconds') -> pl.Expr:
+        """Calculate MSE from linear trend for mid price."""
+        x = pl.col(x_col) / 1e9
+        y = (pl.col(bid_col) + pl.col(ask_col)) / 2
+        
+        n = pl.len()
+        sum_x = x.sum()
+        sum_y = y.sum()
+        sum_xy = (x * y).sum()
+        sum_x2 = (x * x).sum()
+        
+        slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x)
+        intercept = (sum_y - slope * sum_x) / n
+        
+        predicted = slope * x + intercept
+        return ((y - predicted) ** 2).mean()
+    
+    def _mse_trend_product(self, col1: str, col2: str, x_col: str = 'TimestampNanoseconds') -> pl.Expr:
+        """Calculate MSE from linear trend for product of two columns."""
+        x = pl.col(x_col) / 1e9
+        y = pl.col(col1) * pl.col(col2)
+        
+        n = pl.len()
+        sum_x = x.sum()
+        sum_y = y.sum()
+        sum_xy = (x * y).sum()
+        sum_x2 = (x * x).sum()
+        
+        slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x)
+        intercept = (sum_y - slope * sum_x) / n
+        
+        predicted = slope * x + intercept
+        return ((y - predicted) ** 2).mean()
+    
     def feature_computation(self, data: pl.LazyFrame) -> pl.LazyFrame:
         """L2Q feature computation pipeline."""
         # Add bar_id and bar_id_dt
@@ -194,7 +440,10 @@ class L2QFeatureEngineering(FeatureEngineering):
             'section2': self._section2_quote_activity(df),
             'section3': self._section3_spread_features(df),
             'section4': self._section4_quantity_features(df),
-            'section5': self._section5_volume_features(df)
+            'section5': self._section5_volume_features(df),
+            'section6': self._section6_volatility_features(df),
+            'section7': self._section7_trend_features(df),
+            'section8': self._section8_trend_vol_features(df)
         }
         
         # Flatten all features

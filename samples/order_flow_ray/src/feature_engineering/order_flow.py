@@ -29,11 +29,35 @@ class FeatureEngineering(ABC):
             Data with computed features
         """
         pass
+
+
+class OrderFlowFeatureEngineering(FeatureEngineering):
+    """Unified feature engineering for both L2Q and Trade data."""
     
-    @abstractmethod
-    def failure_extraction(self, results: List[Any]) -> List[Any]:
-        """Failure extraction from results for retry."""
-        pass
+    def feature_computation(self, data: pl.LazyFrame, data_type: str = None) -> pl.LazyFrame:
+        """Unified feature computation for both data types.
+        
+        Args:
+            data: Input data
+            data_type: 'level2q' or 'trades' (auto-detected if None)
+            
+        Returns:
+            Features dataframe
+        """
+        if data_type is None:
+            # Auto-detect data type from columns
+            schema = data.collect_schema()
+            if 'BidPrice1' in schema or 'AskPrice1' in schema:
+                data_type = 'level2q'
+            else:
+                data_type = 'trades'
+        
+        if data_type == 'level2q':
+            l2q_eng = L2QFeatureEngineering(self.bar_duration_ms, self.max_retries)
+            return l2q_eng.feature_computation(data)
+        else:
+            trade_eng = TradeFeatureEngineering(self.bar_duration_ms, self.max_retries)
+            return trade_eng.feature_computation(data)
 
 
 class L2QFeatureEngineering(FeatureEngineering):

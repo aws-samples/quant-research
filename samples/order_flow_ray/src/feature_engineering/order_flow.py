@@ -18,8 +18,8 @@ class FeatureEngineering(ABC):
         self.bar_duration_ms = bar_duration_ms
         self.max_retries = max_retries
     
-    def discover_files(self, data_access, input_path: str, file_sort_order: str) -> List[str]:
-        """Discover normalized parquet files for feature engineering.
+    def discover_files(self, data_access, input_path: str, file_sort_order: str) -> List[List[tuple[str, int]]]:
+        """Discover normalized parquet files grouped by date/region/exchange.
         
         Args:
             data_access: Data access instance
@@ -27,21 +27,62 @@ class FeatureEngineering(ABC):
             file_sort_order: Sort order ('asc' or 'desc')
             
         Returns:
-            List of file paths
+            List of file groups, where each group contains [(file_path, size), ...] for same day/region/exchange
         """
+        from collections import defaultdict
+        
         # List all files in normalized directory
         files = data_access.list_files(input_path)
         
         # Filter for .parquet files only
-        parquet_files = [file_path for file_path, size in files if file_path.endswith('.parquet')]
+        parquet_files = [(file_path, size) for file_path, size in files if file_path.endswith('.parquet')]
         
-        # Sort by file_sort_order
+        # Group files by (yyyy, mm, dd, region, exchange)
+        groups = defaultdict(list)
+        
+        for file_path, size in parquet_files:
+            try:
+                # Parse: "2024/01/02/trades/AMERICAS/trades-ARCX-20240102.parquet"
+                parts = file_path.split('/')
+                if len(parts) < 5:
+                    continue
+                    
+                yyyy, mm, dd, data_type, region = parts[-5:]
+                filename = parts[-1]
+                
+                # Extract exchange from filename
+                if data_type == 'trades':
+                    # trades-ARCX-20240102.parquet → ARCX
+                    exchange = filename.split('-')[1] if '-' in filename else 'unknown'
+                elif data_type == 'level2q':
+                    # ARCX-20240102.parquet → ARCX
+                    exchange = filename.split('-')[0] if '-' in filename else 'unknown'
+                else:
+                    continue  # Skip non-trades/level2q files
+                
+                key = (yyyy, mm, dd, region, exchange)
+                groups[key].append((file_path, size))
+                
+            except (IndexError, ValueError):
+                continue  # Skip malformed paths
+        
+        # Convert to list and sort groups
+        group_list = list(groups.values())
+        
+        # Sort each group internally by file path
+        for group in group_list:
+            if file_sort_order == "desc":
+                group.sort(key=lambda x: x[0], reverse=True)
+            else:
+                group.sort(key=lambda x: x[0])
+        
+        # Sort groups by first file in each group
         if file_sort_order == "desc":
-            parquet_files.sort(reverse=True)
+            group_list.sort(key=lambda group: group[0][0] if group else '', reverse=True)
         else:
-            parquet_files.sort()
+            group_list.sort(key=lambda group: group[0][0] if group else '')
             
-        return parquet_files
+        return group_list
     
     @abstractmethod
     def feature_computation(self, data: pl.LazyFrame) -> pl.LazyFrame:
@@ -83,14 +124,39 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
         else:
             raise ValueError(f"Unsupported data type: {data_type}")
     
-    def get_failed_items(self, results: List[Any]) -> List[tuple[str, float]]:
-        """Extract failed items for retry."""
-        failed = []
+    def get_failed_items(self, results: List[Any]) -> List[List[tuple[str, int]]]:
+        """Extract failed items for retry, maintaining group structure."""
+        from collections import defaultdict
+        
+        # Group failed items by their original group key
+        failed_groups = defaultdict(list)
+        
         for result in results:
             if result['message'] != 'success' and result['input_path'] != 'group_error':
-                file_size = result.get('file_size_gb', 1.0)
-                failed.append((result['input_path'], file_size))
-        return failed
+                file_path = result['input_path']
+                file_size = int(result.get('size_gb', 1.0) * (1024 ** 3))  # Convert back to bytes
+                
+                # Extract grouping key from file path
+                try:
+                    parts = file_path.split('/')
+                    if len(parts) >= 5:
+                        yyyy, mm, dd, data_type, region = parts[-5:]
+                        filename = parts[-1]
+                        
+                        if data_type == 'trades':
+                            exchange = filename.split('-')[1] if '-' in filename else 'unknown'
+                        elif data_type == 'level2q':
+                            exchange = filename.split('-')[0] if '-' in filename else 'unknown'
+                        else:
+                            continue
+                        
+                        key = (yyyy, mm, dd, region, exchange)
+                        failed_groups[key].append((file_path, file_size))
+                except (IndexError, ValueError):
+                    # If we can't parse the path, create a single-item group
+                    failed_groups[file_path].append((file_path, file_size))
+        
+        return list(failed_groups.values())
     
     def failure_extraction(self, results: List[Any]) -> List[Any]:
         """Unified failure extraction."""

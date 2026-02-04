@@ -361,29 +361,123 @@ class Pipeline:
         
         return results
     
-    def _run_feature_engineering(self, data: list[dict]) -> list[dict]:
-        """Run feature engineering for given normalization results."""
+    def _run_feature_engineering(self, files: list[tuple[str, int]]) -> list[dict]:
+        """Run feature engineering for given files."""
         feature_engineering = self.config.processing.feature_engineering
         features_loc = self.config.storage.features
+        feature_engineering_base_path = self.config.storage.normalized.get_path()
+        memory_multiplier = self.config.ray.memory_multiplier
         
-        # Extract successful files from normalization results
-        successful_files = [(r['output_path'], r.get('output_size_mb', 1.0) / 1024) 
-                          for r in data if r.get('message') == 'success']
+        # Serialize features location once
+        features_dict = {
+            'access_type': features_loc.get_access_type(),
+            'path': features_loc.get_path(),
+        }
+        if features_loc.get_access_type() == 's3tables':
+            features_dict['table_bucket_arn'] = features_loc.table_bucket_arn
+            features_dict['namespace'] = features_loc.namespace
+            features_dict['table_name'] = features_loc.table_name
         
-        # Import order flow feature engineering
-        from feature_engineering.order_flow_pipeline import OrderFlowFeatureEngineering
+        # Helper function to submit a task
+        def submit_task(file_path, file_size):
+            if self.config.ray.flat_core_count is not None:
+                num_cpus = self.config.ray.flat_core_count
+                memory_gb = num_cpus * self.config.ray.memory_per_core_gb
+            else:
+                memory_bytes = int(file_size * memory_multiplier)
+                memory_gb = memory_bytes / (1024 ** 3)
+                num_cpus = ceil(memory_gb / self.config.ray.memory_per_core_gb) + self.config.ray.cpu_buffer
+            
+            @ray.remote(num_cpus=num_cpus, max_retries=0)
+            def feature_engineering_file(fp: str, fs: float, region: str, fe_base: str, features_loc_dict: dict, mem_gb: float, cpus: int, profile: str, bar_duration_ms: int) -> dict:
+                try:
+                    import polars as pl
+                    from data_preprocessing.data_access.factory import DataAccessFactory
+                    from feature_engineering.order_flow import OrderFlowFeatureEngineering
+                    
+                    # Extract data_type from path
+                    data_type = 'level2q' if 'level2q' in fp else 'trades'
+                    
+                    # Read from normalized
+                    data_access = DataAccessFactory.create('s3', region=region, profile_name=profile)
+                    df = data_access.read(fp)
+                    
+                    # Apply feature engineering
+                    feature_eng = OrderFlowFeatureEngineering(bar_duration_ms=bar_duration_ms)
+                    features = feature_eng.feature_computation(df, data_type)
+                    
+                    # Write to features location
+                    if features_loc_dict['access_type'] == 's3tables':
+                        output_access = DataAccessFactory.create(
+                            's3tables',
+                            region=region,
+                            table_bucket_arn=features_loc_dict['table_bucket_arn'],
+                            namespace=features_loc_dict['namespace'],
+                            profile_name=profile
+                        )
+                        table_name = f"{features_loc_dict['table_name']}_{data_type}"
+                        output_access.write(features, table_name, mode='append')
+                        output_path = f"{features_loc_dict['namespace']}.{table_name}"
+                    else:
+                        output_access = data_access
+                        _, relative_path = fp.split(fe_base.rstrip('/') + '/', 1)
+                        output_path = f"{features_loc_dict['path'].rstrip('/')}/{relative_path}"
+                        output_path = output_path.replace('.parquet', f'_features_{bar_duration_ms}ms.parquet')
+                        output_access.write(features, output_path)
+                    
+                    row_count = features.select(pl.len()).collect().item()
+                    
+                    # Get output file size
+                    if features_loc_dict['access_type'] == 's3tables':
+                        output_size_mb = 0
+                    else:
+                        try:
+                            output_size_mb = output_access.get_file_size(output_path) / (1024 ** 2)
+                        except:
+                            output_size_mb = 0
+                    
+                    return {
+                        'file': fp.split('/')[-1],
+                        'size_gb': fs,
+                        'memory_gb': mem_gb,
+                        'cpus': cpus,
+                        'input_path': fp,
+                        'output_path': output_path,
+                        'row_count': row_count,
+                        'output_size_mb': output_size_mb,
+                        'data_type': data_type,
+                        'stage': str(feature_engineering),
+                        'message': 'success'
+                    }
+                except Exception as e:
+                    return {
+                        'file': fp.split('/')[-1],
+                        'size_gb': fs,
+                        'memory_gb': mem_gb,
+                        'cpus': cpus,
+                        'input_path': fp,
+                        'output_path': None,
+                        'row_count': None,
+                        'output_size_mb': 0,
+                        'data_type': data_type if 'data_type' in locals() else 'unknown',
+                        'stage': str(feature_engineering),
+                        'message': str(e)
+                    }
+            
+            future = feature_engineering_file.remote(
+                file_path, file_size, self.config.region, feature_engineering_base_path,
+                features_dict, memory_gb, num_cpus, self.config.profile_name,
+                self.config.processing.feature_engineering.bar_duration_ms
+            )
+            return future
         
-        # Initialize order flow feature engineering
-        order_flow_fe = OrderFlowFeatureEngineering(self.config)
+        # Submit all tasks and wait for completion
+        futures = [submit_task(file_path, file_size) for file_path, file_size in files]
+        results = ray.get(futures)
         
-        try:
-            print(f"Processing {len(successful_files)} files for feature engineering")
-            results = order_flow_fe.process_files(successful_files)
-            return results
-        finally:
-            order_flow_fe.shutdown()
+        return results
     
-    def _feature_engineering_step(self, data: list[dict]) -> Any:
+    def _feature_engineering_step(self, data: list[tuple[str, int]]) -> Any:
         """Execute feature engineering step with retry logic."""
         return self._execute_step_with_retry(
             'feature_engineering',

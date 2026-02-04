@@ -41,13 +41,20 @@ class FeatureEngineering(ABC):
         
         for file_path, size in parquet_files:
             try:
-                # Parse: "2024/01/02/trades/AMERICAS/trades-ARCX-20240102.parquet"
+                # Parse: "2023/01/02/level2q/AMERICAS/ARCX-20230102.parquet" (without s3:// prefix)
                 parts = file_path.split('/')
                 if len(parts) < 5:
                     continue
+                
+                # Skip s3://bucket/path prefix and take last 5 parts for: yyyy/mm/dd/data_type/region
+                # Full path: s3://orderflowanalysis/intermediate/normalized/2023/01/02/level2q/AMERICAS/ARCX-20230102.parquet
+                # We want: 2023/01/02/level2q/AMERICAS
+                relevant_parts = parts[5:]  # Skip s3://orderflowanalysis/intermediate/normalized
+                if len(relevant_parts) < 5:
+                    continue
                     
-                yyyy, mm, dd, data_type, region = parts[-5:]
-                filename = parts[-1]
+                yyyy, mm, dd, data_type, region = relevant_parts[:5]
+                filename = relevant_parts[-1]
                 
                 # Extract exchange from filename
                 if data_type == 'trades':

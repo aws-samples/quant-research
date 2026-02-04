@@ -18,6 +18,28 @@ class FeatureEngineering(ABC):
         self.bar_duration_ms = bar_duration_ms
         self.max_retries = max_retries
     
+    def discover_files(self, data_access, input_path: str, file_sort_order: str) -> List[str]:
+        """Discover normalized parquet files for feature engineering.
+        
+        Args:
+            data_access: Data access instance
+            input_path: S3 path to normalized data
+            file_sort_order: Sort order ('asc' or 'desc')
+            
+        Returns:
+            List of file paths
+        """
+        # List all .parquet files in normalized directory
+        files = data_access.list_files(input_path, pattern="*.parquet")
+        
+        # Sort by file_sort_order
+        if file_sort_order == "desc":
+            files.sort(reverse=True)
+        else:
+            files.sort()
+            
+        return files
+    
     @abstractmethod
     def feature_computation(self, data: pl.LazyFrame) -> pl.LazyFrame:
         """Feature computation from normalized data.

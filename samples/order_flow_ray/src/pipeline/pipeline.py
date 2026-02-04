@@ -19,6 +19,15 @@ class Pipeline:
         """
         self.config = config
         self.data_access = None
+    
+    def _get_active_steps(self) -> list[tuple[str, Any]]:
+        """Return list of (step_name, step_instance) for configured steps."""
+        steps = []
+        for step_name in ['normalization', 'feature_engineering', 'training', 'inference', 'backtest']:
+            step = getattr(self.config.processing, step_name, None)
+            if step is not None:
+                steps.append((step_name, step))
+        return steps
         
     def initialize(self):
         """Initialize Ray and data access."""
@@ -28,25 +37,44 @@ class Pipeline:
             else:
                 ray.init()
         
-        # Initialize data access for raw data
-        raw_loc = self.config.storage.raw_data
-        self.data_access = DataAccessFactory.create(
-            raw_loc.get_access_type(),
-            region=self.config.region,
-            profile_name=self.config.profile_name
-        )
+        # Get first active step to determine data access type
+        active_steps = self._get_active_steps()
+        if not active_steps:
+            raise ValueError("No processing steps configured")
         
-        # Initialize data access for normalized output
-        norm_loc = self.config.storage.normalized
-        if norm_loc.get_access_type() == 's3tables':
-            self.normalized_access = DataAccessFactory.create(
+        first_step_name, first_step = active_steps[0]
+        input_location = self.config.storage.get_step_input(first_step)
+        
+        # Initialize data access for input location
+        if input_location.get_access_type() == 's3tables':
+            self.data_access = DataAccessFactory.create(
                 's3tables',
                 region=self.config.region,
-                table_bucket_arn=norm_loc.table_bucket_arn,
-                namespace=norm_loc.namespace,
+                table_bucket_arn=input_location.table_bucket_arn,
+                namespace=input_location.namespace,
                 profile_name=self.config.profile_name
             )
-            self.normalized_access.create_namespace()
+        else:
+            self.data_access = DataAccessFactory.create(
+                's3',
+                region=self.config.region,
+                profile_name=self.config.profile_name
+            )
+        
+        # Initialize data access for normalized output (if normalization is enabled)
+        if self.config.processing.normalization:
+            norm_loc = self.config.storage.normalized
+            if norm_loc.get_access_type() == 's3tables':
+                self.normalized_access = DataAccessFactory.create(
+                    's3tables',
+                    region=self.config.region,
+                    table_bucket_arn=norm_loc.table_bucket_arn,
+                    namespace=norm_loc.namespace,
+                    profile_name=self.config.profile_name
+                )
+                self.normalized_access.create_namespace()
+            else:
+                self.normalized_access = self.data_access
         else:
             self.normalized_access = self.data_access
     
@@ -100,13 +128,26 @@ class Pipeline:
             self.shutdown()
     
     def _discover_files(self) -> list[tuple[str, int]]:
-        """Discover files based on data config."""
+        """Discover files based on first active step."""
         if not self.data_access:
             self.initialize()
         
-        return self.config.processing.normalization.discover_files(
+        # Get active steps in order
+        active_steps = self._get_active_steps()
+        
+        if not active_steps:
+            raise ValueError("No processing steps configured")
+        
+        # Use the first step to discover files
+        first_step_name, first_step = active_steps[0]
+        
+        # Get input path for first step
+        input_location = self.config.storage.get_step_input(first_step)
+        
+        # Discover files using the first step
+        return first_step.discover_files(
             self.data_access, 
-            self.config.data.raw_data_path, 
+            input_location.get_path(), 
             self.config.ray.file_sort_order
         )
     

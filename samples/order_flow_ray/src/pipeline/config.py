@@ -90,6 +90,26 @@ class StorageConfig:
     models: StorageLocation
     predictions: StorageLocation
     backtest: StorageLocation
+    
+    def get_step_input_output(self, step_instance) -> tuple[StorageLocation, StorageLocation]:
+        """Return (input_location, output_location) for a given step instance."""
+        from data_preprocessing.data_normalization import BMLLNormalizer
+        from feature_engineering.order_flow import FeatureEngineering
+        
+        if isinstance(step_instance, BMLLNormalizer):
+            return (self.raw_data, self.normalized)
+        elif isinstance(step_instance, FeatureEngineering):
+            return (self.normalized, self.features)
+        else:
+            raise ValueError(f"Unknown step type: {type(step_instance)}")
+    
+    def get_step_input(self, step_instance) -> StorageLocation:
+        """Return input location for a given step instance."""
+        return self.get_step_input_output(step_instance)[0]
+    
+    def get_step_output(self, step_instance) -> StorageLocation:
+        """Return output location for a given step instance."""
+        return self.get_step_input_output(step_instance)[1]
 
 
 @dataclass(frozen=True)

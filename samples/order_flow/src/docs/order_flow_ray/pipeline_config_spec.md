@@ -2,7 +2,14 @@
 
 ## Overview
 
-The pipeline uses a hierarchical configuration structure with **executable instances** rather than configuration objects. This allows direct execution without factory patterns while maintaining flexibility and testability.
+The pipeline uses a hierarchical configuration structure with **executable instances** and **step-aware input/output mapping**. Each pipeline step can discover its own input files and knows where to write outputs based on the StorageConfig mapping.
+
+## Key Features
+
+- **Step Independence**: Each step can run independently by discovering its own input files
+- **Input/Output Mapping**: StorageConfig automatically maps step instances to their input/output locations
+- **Flexible Execution**: Run any subset of steps (normalization only, feature engineering only, etc.)
+- **Type Safety**: Uses isinstance() for robust step identification
 
 ## Configuration Structure
 
@@ -12,10 +19,10 @@ PipelineConfig (top-level)
 ├── ProcessingConfig (executable step instances)
 │   ├── normalization: Normalizer | None
 │   ├── feature_engineering: FeatureEngineer | None
-│   ├── training: Trainer | None
-│   ├── inference: Predictor | None
-│   └── backtest: Backtester | None
-├── StorageConfig (intermediate/output paths)
+│   ├── model_training: Trainer | None
+│   ├── model_inference: Predictor | None
+│   └── model_backtest: Backtester | None
+├── StorageConfig (step input/output mapping)
 └── RayConfig (runtime_env, resources)
 ```
 
@@ -72,52 +79,78 @@ class ProcessingConfig:
 
 **Step Interfaces:**
 
+All pipeline steps must implement a `discover_files()` method for input file discovery:
+
 - **Normalizer**: Transforms raw data to normalized schema
   - Method: `normalize(raw_data: pl.LazyFrame, data_type: str) -> pl.LazyFrame`
+  - Method: `discover_files(data_access, input_path: str, file_sort_order: str) -> List[str]`
   
 - **FeatureEngineer**: Computes features from normalized data
   - Method: `engineer_features(normalized_data: pl.LazyFrame) -> pl.LazyFrame`
+  - Method: `discover_files(data_access, input_path: str, file_sort_order: str) -> List[str]`
   
 - **Trainer**: Trains ML models on features
   - Method: `train(features: pl.LazyFrame) -> Model`
+  - Method: `discover_files(data_access, input_path: str, file_sort_order: str) -> List[str]`
   
 - **Predictor**: Generates predictions using trained models
   - Method: `predict(features: pl.LazyFrame, model: Model) -> pl.LazyFrame`
+  - Method: `discover_files(data_access, input_path: str, file_sort_order: str) -> List[str]`
   
 - **Backtester**: Evaluates strategy performance
   - Method: `backtest(predictions: pl.LazyFrame) -> BacktestResults`
+  - Method: `discover_files(data_access, input_path: str, file_sort_order: str) -> List[str]`
 
 ### StorageConfig
 
-Defines paths for intermediate and output data.
+Defines S3 locations for each pipeline stage and provides automatic input/output mapping for step instances.
 
 ```python
 @dataclass(frozen=True)
 class StorageConfig:
-    intermediate_path: str      # S3 path for intermediate results
-    output_path: str            # S3 path for final outputs
+    raw_data: S3Location
+    normalized: S3Location
+    features: S3Location
+    models: S3Location
+    predictions: S3Location
+    backtest: S3Location
     
-    # Derived paths
-    @property
-    def normalized_path(self) -> str:
-        return f"{self.intermediate_path}/normalized"
+    def get_step_input_output(self, step_instance) -> Tuple[S3Location, S3Location]:
+        """Return (input_location, output_location) for a given step instance."""
+        from data_preprocessing.data_normalization import BMLLNormalizer
+        from feature_engineering.order_flow import FeatureEngineering
+        from model_training.base import ModelTraining
+        from model_inference.base import ModelInference
+        from model_backtest.base import ModelBacktest
+        
+        if isinstance(step_instance, BMLLNormalizer):
+            return (self.raw_data, self.normalized)
+        elif isinstance(step_instance, FeatureEngineering):
+            return (self.normalized, self.features)
+        elif isinstance(step_instance, ModelTraining):
+            return (self.features, self.models)
+        elif isinstance(step_instance, ModelInference):
+            return (self.features, self.predictions)
+        elif isinstance(step_instance, ModelBacktest):
+            return (self.predictions, self.backtest)
+        else:
+            raise ValueError(f"Unknown step type: {type(step_instance)}")
     
-    @property
-    def features_path(self) -> str:
-        return f"{self.intermediate_path}/features"
+    def get_step_input(self, step_instance) -> S3Location:
+        """Return input location for a given step instance."""
+        return self.get_step_input_output(step_instance)[0]
     
-    @property
-    def models_path(self) -> str:
-        return f"{self.output_path}/models"
-    
-    @property
-    def predictions_path(self) -> str:
-        return f"{self.output_path}/predictions"
-    
-    @property
-    def backtest_path(self) -> str:
-        return f"{self.output_path}/backtest"
+    def get_step_output(self, step_instance) -> S3Location:
+        """Return output location for a given step instance."""
+        return self.get_step_input_output(step_instance)[1]
 ```
+
+**Step Flow Mapping:**
+- `BMLLNormalizer`: raw_data → normalized
+- `FeatureEngineering`: normalized → features  
+- `ModelTraining`: features → models
+- `ModelInference`: features → predictions
+- `ModelBacktest`: predictions → backtest
 
 ### RayConfig
 
@@ -151,8 +184,12 @@ config = PipelineConfig(
         backtest=VectorizedBacktester()
     ),
     storage=StorageConfig(
-        intermediate_path="s3://bucket/intermediate",
-        output_path="s3://bucket/output"
+        raw_data=S3Location(path="s3://bucket/raw/"),
+        normalized=S3Location(path="s3://bucket/intermediate/normalized"),
+        features=S3Location(path="s3://bucket/intermediate/features"),
+        models=S3Location(path="s3://bucket/output/models"),
+        predictions=S3Location(path="s3://bucket/output/predictions"),
+        backtest=S3Location(path="s3://bucket/output/backtest")
     ),
     ray=RayConfig(
         runtime_env={"working_dir": "/path/to/src"}
@@ -185,54 +222,97 @@ config = PipelineConfig(
 config = PipelineConfig(
     data=DataConfig(...),
     processing=ProcessingConfig(
-        normalization=BMLLNormalizer(),
+        normalization=None,  # Skip - use pre-normalized data
         feature_engineering=OrderFlowFeatureEngineer(lookback=10),
-        training=None,
-        inference=None,
-        backtest=None
+        model_training=None,
+        model_inference=None,
+        model_backtest=None
     ),
-    storage=StorageConfig(...),
+    storage=StorageConfig(
+        raw_data=S3Location(path="s3://bucket/raw/"),
+        normalized=S3Location(path="s3://bucket/intermediate/normalized"),
+        features=S3Location(path="s3://bucket/intermediate/features"),
+        models=S3Location(path="s3://bucket/output/models"),
+        predictions=S3Location(path="s3://bucket/output/predictions"),
+        backtest=S3Location(path="s3://bucket/output/backtest")
+    ),
     ray=RayConfig(...)
 )
 ```
 
-## Pipeline Execution Flow
+**Pipeline will:**
+1. Discover normalized files from `s3://bucket/intermediate/normalized`
+2. Apply feature engineering and write to `s3://bucket/intermediate/features`
+3. Skip all other steps
+
+## Step-Aware Pipeline Execution
 
 ```python
-def run(self, config: PipelineConfig):
-    # Initialize Ray
-    ray.init(runtime_env=config.ray.runtime_env)
+def _discover_files(self):
+    # Get first active step
+    active_steps = self._get_active_steps()
+    if not active_steps:
+        raise ValueError("No processing steps configured")
     
-    # Discover files
-    files = self.discover_files(config.data.raw_data_path)
+    first_step_name, first_step_instance = active_steps[0]
     
-    # Execute enabled steps
-    if config.processing.normalization:
-        normalized = self.normalize_step(files, config)
+    # Get input path using isinstance mapping
+    input_location = self.config.storage.get_step_input(first_step_instance)
     
-    if config.processing.feature_engineering:
-        features = self.feature_engineering_step(normalized, config)
-    
-    if config.processing.training:
-        model = self.training_step(features, config)
-    
-    if config.processing.inference:
-        predictions = self.inference_step(features, model, config)
-    
-    if config.processing.backtest:
-        results = self.backtest_step(predictions, config)
-    
-    ray.shutdown()
+    # Let the step discover its own input files
+    return first_step_instance.discover_files(
+        self.data_access, 
+        input_location.path, 
+        self.config.ray.file_sort_order
+    )
+
+def _get_active_steps(self) -> List[Tuple[str, Any]]:
+    """Return list of (step_name, step_instance) for configured steps."""
+    steps = []
+    for step_name in ['normalization', 'feature_engineering', 'model_training', 'model_inference', 'model_backtest']:
+        step = getattr(self.config.processing, step_name, None)
+        if step is not None:
+            steps.append((step_name, step))
+    return steps
+```
+
+## File Discovery Examples
+
+**Normalization Step:**
+```python
+# BMLLNormalizer.discover_files() scans raw_data path
+# Looks for: s3://bucket/raw/2024/01/01/XNAS/trades/*.parquet
+files = normalizer.discover_files(data_access, "s3://bucket/raw/", "desc")
+```
+
+**Feature Engineering Step:**
+```python
+# FeatureEngineering.discover_files() scans normalized path  
+# Looks for: s3://bucket/intermediate/normalized/**/*.parquet
+files = feature_eng.discover_files(data_access, "s3://bucket/intermediate/normalized", "desc")
 ```
 
 ## Benefits
 
-1. **Direct Execution**: No factory pattern needed - just call methods on instances
-2. **Flexibility**: Pass any object implementing the interface (duck typing)
-3. **Testability**: Easy to inject mocks for testing
-4. **Simplicity**: No config-to-instance translation layer
-5. **Type Safety**: Type hints catch errors at development time
-6. **Reusability**: Create different configs for different runs
+1. **Step Independence**: Each step can run independently by discovering its own input files
+2. **Flexible Execution**: Run any subset of steps without dependencies
+3. **Type Safety**: isinstance() provides robust step identification
+4. **Automatic I/O Mapping**: StorageConfig handles input/output routing
+5. **Testability**: Easy to test individual steps in isolation
+6. **Composability**: Mix and match steps for different pipeline runs
+
+## Architecture Improvements
+
+**Before:**
+- Pipeline hardcoded to use normalization for file discovery
+- Steps couldn't run independently
+- Required all previous steps to be configured
+
+**After:**
+- Each step discovers its own input files
+- StorageConfig provides automatic input/output mapping
+- Can run any subset of steps (normalization only, feature engineering only, etc.)
+- Type-safe step identification with isinstance()
 
 ## Trade-offs
 

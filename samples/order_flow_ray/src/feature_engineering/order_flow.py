@@ -79,44 +79,31 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
         return [(r['input_path'], int(r.get('size_gb', 1.0) * (1024**3))) for r in failed]
     
     def group_files_for_processing(self, files: list[tuple[str, int]]) -> list[list[tuple[str, int]]]:
-        """Group files by date/region/exchange for batch processing.
+        """Group files by exchange for batch processing.
         
         Args:
             files: List of (file_path, file_size) tuples
             
         Returns:
-            List of file groups, each group contains files for same date/region/exchange
+            List of file groups, each group contains trades+level2q files for same exchange
         """
         from collections import defaultdict
         
         groups = defaultdict(list)
         
         for file_path, file_size in files:
-            # Extract date/region/exchange from path
-            # Expected format: .../YYYY/MM/DD/exchange/data_type/file.parquet
-            path_parts = file_path.split('/')
+            # Extract exchange from filename
+            # Expected format: trades-XASE-20240604.parquet or XASE-20240604.parquet
+            filename = file_path.split('/')[-1]
             
-            # Find date components (YYYY/MM/DD)
-            date_idx = None
-            for i, part in enumerate(path_parts):
-                if len(part) == 4 and part.isdigit() and 2020 <= int(part) <= 2030:
-                    date_idx = i
-                    break
-            
-            if date_idx and date_idx + 2 < len(path_parts):
-                year = path_parts[date_idx]
-                month = path_parts[date_idx + 1]
-                day = path_parts[date_idx + 2]
-                exchange = path_parts[date_idx + 3] if date_idx + 3 < len(path_parts) else 'unknown'
-                region = path_parts[date_idx + 4] if date_idx + 4 < len(path_parts) else 'AMERICAS'
-                
-                group_key = f"{year}{month}{day}_{exchange}_{region}"
-                groups[group_key].append((file_path, file_size))
+            if filename.startswith('trades-'):
+                exchange = filename.split('-')[1]
+            elif '-' in filename:
+                exchange = filename.split('-')[0]
             else:
-                # Fallback: use filename as group key
-                filename = path_parts[-1]
-                group_key = filename.split('.')[0]
-                groups[group_key].append((file_path, file_size))
+                exchange = filename.split('.')[0]
+            
+            groups[exchange].append((file_path, file_size))
         
         return list(groups.values())
 

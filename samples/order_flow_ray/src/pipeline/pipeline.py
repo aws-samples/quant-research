@@ -213,34 +213,39 @@ class Pipeline:
                 break
         
         # Final reporting
-        if step_name == 'normalization':
-            successful = [r for r in all_results if r['message'] == 'success']
-            failed = [r for r in all_results if r['message'] != 'success']
-            
-            print(f"\n{step_name.title()} FINAL SUMMARY:")
-            print(f"Original files: {original_count}")
-            print(f"Total successful: {len(successful)}/{len(all_results)}")
-            print(f"Total failed: {len(failed)}/{len(all_results)}")
-            
-            # Show attempt breakdown
-            print(f"\nAttempt breakdown:")
-            for detail in attempt_details:
-                if detail['attempt'] == 1:
-                    print(f"  Initial attempt: {detail['successful']} success, {detail['failed']} failed")
-                else:
-                    print(f"  Retry {detail['attempt'] - 1}: {detail['successful']} success, {detail['failed']} failed")
-            
-            if failed:
-                print(f"\nFailed files after {max_retries} retries:")
-                for result in failed[:5]:
-                    print(f"  {result['input_path']}: {result['message'][:100]}")
-            
-            if successful:
-                print(f"\nSample successful files:")
-                for result in successful[:5]:
-                    input_size_mb = result['size_gb'] * 1024
+        successful = [r for r in all_results if r['message'] == 'success']
+        failed = [r for r in all_results if r['message'] != 'success']
+        
+        print(f"\n{step_name.title()} FINAL SUMMARY:")
+        print(f"Original files: {original_count}")
+        print(f"Total successful: {len(successful)}/{len(all_results)}")
+        print(f"Total failed: {len(failed)}/{len(all_results)}")
+        
+        # Show attempt breakdown
+        print(f"\nAttempt breakdown:")
+        for detail in attempt_details:
+            if detail['attempt'] == 1:
+                print(f"  Initial attempt: {detail['successful']} success, {detail['failed']} failed")
+            else:
+                print(f"  Retry {detail['attempt'] - 1}: {detail['successful']} success, {detail['failed']} failed")
+        
+        if failed:
+            print(f"\nFailed files after {max_retries} retries:")
+            for result in failed[:5]:
+                print(f"  {result.get('input_path', 'unknown')}: {result['message'][:100]}")
+        
+        if successful:
+            print(f"\nSample successful files:")
+            for result in successful[:5]:
+                input_path = result.get('input_path', 'unknown')
+                output_path = result.get('output_path', 'unknown')
+                row_count = result.get('row_count', 0)
+                if step_name == 'normalization':
+                    input_size_mb = result.get('size_gb', 0) * 1024
                     output_size_mb = result.get('output_size_mb', 0)
-                    print(f"  {result['input_path']} -> {result['output_path']} ({result['row_count']:,} rows, {input_size_mb:.1f}MB -> {output_size_mb:.1f}MB)")
+                    print(f"  {input_path} -> {output_path} ({row_count:,} rows, {input_size_mb:.1f}MB -> {output_size_mb:.1f}MB)")
+                else:
+                    print(f"  {input_path} -> {output_path} ({row_count:,} rows)")
         
         return all_results
     
@@ -356,15 +361,14 @@ class Pipeline:
         
         return results
     
-    def _feature_engineering_step(self, data: Any) -> Any:
-        """Execute feature engineering step."""
+    def _run_feature_engineering(self, data: list[dict]) -> list[dict]:
+        """Run feature engineering for given normalization results."""
         feature_engineering = self.config.processing.feature_engineering
-        if not feature_engineering:
-            return data
-            
-        print("\n" + "=" * 80)
-        print("FEATURE ENGINEERING STEP")
-        print("=" * 80)
+        features_loc = self.config.storage.features
+        
+        # Extract successful files from normalization results
+        successful_files = [(r['output_path'], r.get('output_size_mb', 1.0) / 1024) 
+                          for r in data if r.get('message') == 'success']
         
         # Import order flow feature engineering
         from feature_engineering.order_flow_pipeline import OrderFlowFeatureEngineering
@@ -373,29 +377,20 @@ class Pipeline:
         order_flow_fe = OrderFlowFeatureEngineering(self.config)
         
         try:
-            # Convert normalization results to file list
-            if isinstance(data, list):
-                # Extract successful files from normalization results
-                successful_files = [(r['output_path'], r.get('output_size_mb', 1.0) / 1024) 
-                                  for r in data if r['message'] == 'success']
-            else:
-                # Assume data is already a file list
-                successful_files = data
-            
             print(f"Processing {len(successful_files)} files for feature engineering")
-            
-            # Execute with retry logic (reuse pattern from normalization)
-            results = self._execute_step_with_retry(
-                'feature_engineering',
-                successful_files,
-                feature_engineering,
-                order_flow_fe.process_files
-            )
-            
+            results = order_flow_fe.process_files(successful_files)
             return results
-            
         finally:
             order_flow_fe.shutdown()
+    
+    def _feature_engineering_step(self, data: list[dict]) -> Any:
+        """Execute feature engineering step with retry logic."""
+        return self._execute_step_with_retry(
+            'feature_engineering',
+            data,
+            self.config.processing.feature_engineering,
+            self._run_feature_engineering
+        )
     
     def _training_step(self, data: Any) -> Any:
         """Execute training step."""

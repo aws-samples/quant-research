@@ -94,11 +94,11 @@ class StorageConfig:
     def get_step_input_output(self, step_instance) -> tuple[StorageLocation, StorageLocation]:
         """Return (input_location, output_location) for a given step instance."""
         from data_preprocessing.data_normalization import BMLLNormalizer
-        from feature_engineering.order_flow import FeatureEngineering
+        from feature_engineering.order_flow import OrderFlowFeatureEngineering
         
         if isinstance(step_instance, BMLLNormalizer):
             return (self.raw_data, self.normalized)
-        elif isinstance(step_instance, FeatureEngineering):
+        elif isinstance(step_instance, OrderFlowFeatureEngineering):
             return (self.normalized, self.features)
         else:
             raise ValueError(f"Unknown step type: {type(step_instance)}")

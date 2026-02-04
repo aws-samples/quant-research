@@ -318,9 +318,43 @@ class Pipeline:
     def _feature_engineering_step(self, data: Any) -> Any:
         """Execute feature engineering step."""
         feature_engineering = self.config.processing.feature_engineering
-        # TODO: Implement feature engineering
-        print("Feature engineering not yet implemented")
-        return data
+        if not feature_engineering:
+            return data
+            
+        print("\n" + "=" * 80)
+        print("FEATURE ENGINEERING STEP")
+        print("=" * 80)
+        
+        # Import order flow feature engineering
+        from feature_engineering.order_flow_pipeline import OrderFlowFeatureEngineering
+        
+        # Initialize order flow feature engineering
+        order_flow_fe = OrderFlowFeatureEngineering(self.config)
+        
+        try:
+            # Convert normalization results to file list
+            if isinstance(data, list):
+                # Extract successful files from normalization results
+                successful_files = [(r['output_path'], r.get('output_size_mb', 1.0) / 1024) 
+                                  for r in data if r['message'] == 'success']
+            else:
+                # Assume data is already a file list
+                successful_files = data
+            
+            print(f"Processing {len(successful_files)} files for feature engineering")
+            
+            # Execute with retry logic (reuse pattern from normalization)
+            results = self._execute_step_with_retry(
+                'feature_engineering',
+                successful_files,
+                feature_engineering,
+                order_flow_fe.process_files
+            )
+            
+            return results
+            
+        finally:
+            order_flow_fe.shutdown()
     
     def _training_step(self, data: Any) -> Any:
         """Execute training step."""

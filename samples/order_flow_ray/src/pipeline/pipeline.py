@@ -409,7 +409,7 @@ class Pipeline:
                         
                         # Apply feature engineering
                         feature_eng = OrderFlowFeatureEngineering(bar_duration_ms=bar_duration_ms)
-                        features = feature_eng.compute_features(df, data_type, file_path)
+                        features = feature_eng.feature_computation(df, data_type)
                         
                         # Write to features location
                         if features_loc_dict['access_type'] == 's3tables':

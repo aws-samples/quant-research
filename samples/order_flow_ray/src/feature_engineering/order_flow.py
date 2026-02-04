@@ -111,15 +111,7 @@ class FeatureEngineering(ABC):
 class OrderFlowFeatureEngineering(FeatureEngineering):
     """Unified feature engineering for both Trade and L2Q data."""
     
-    def compute_features(self, data: pl.LazyFrame, data_type: str, source_path: str = None) -> pl.LazyFrame:
-        """Compute features based on data type - matches normalization pattern."""
-        if data_type == 'level2q':
-            return self._l2q_feature_computation(data)
-        elif data_type == 'trades':
-            return self._trade_feature_computation(data)
-        else:
-            raise ValueError(f"Unsupported data type: {data_type}")
-    
+
     def feature_computation(self, data: pl.LazyFrame, data_type: str = None) -> pl.LazyFrame:
         """Route to appropriate feature computation based on data type."""
         # Auto-detect data type if not provided

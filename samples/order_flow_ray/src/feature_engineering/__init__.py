@@ -2,6 +2,7 @@
 from .order_flow import FeatureEngineering, TradeFeatureEngineering, L2QFeatureEngineering
 from .base import TimeBarFeatureEngineering
 from .factory import FeatureEngineeringFactory
+from .order_flow_pipeline import OrderFlowFeatureEngineering
 
 __all__ = [
     'FeatureEngineering',
@@ -9,4 +10,5 @@ __all__ = [
     'FeatureEngineeringFactory',
     'TradeFeatureEngineering',
     'L2QFeatureEngineering',
+    'OrderFlowFeatureEngineering',
 ]

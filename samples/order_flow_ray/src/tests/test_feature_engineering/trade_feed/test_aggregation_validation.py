@@ -19,9 +19,11 @@ TEST_CASES = [
 
 def test_aggregation_calculations():
     """Test that aggregation calculations match expected results."""
-    test_data_dir = '/Users/blitvin/IdeaProjects/quant-research-sample-using-amazon-ecs-and-aws-batch/samples/order_flow_ray/src/tests/feature_engineering/trade_feed/test_data'
+    test_data_dir = os.path.join(current_dir, 'test_data')
     
     fe = TradeFeatureEngineering(bar_duration_ms=300000)  # 5 minutes
+    
+    failed_tests = []
     
     for test_case in TEST_CASES:
         ticker = test_case['ticker']
@@ -31,11 +33,15 @@ def test_aggregation_calculations():
         
         try:
             # Load raw data
-            raw_data_path = f'{test_data_dir}/raw_trades_{ticker}_{timeframe}.csv'
+            raw_data_path = os.path.join(test_data_dir, f'raw_trades_{ticker}_{timeframe}.csv')
+            if not os.path.exists(raw_data_path):
+                raise FileNotFoundError(f"Raw data file not found: {raw_data_path}")
             raw_data = pl.read_csv(raw_data_path).lazy()
             
             # Load expected results
-            expected_path = f'{test_data_dir}/expected_results_{ticker}_{timeframe}.csv'
+            expected_path = os.path.join(test_data_dir, f'expected_results_{ticker}_{timeframe}.csv')
+            if not os.path.exists(expected_path):
+                raise FileNotFoundError(f"Expected results file not found: {expected_path}")
             expected_df = pl.read_csv(expected_path)
             
             # Calculate actual results
@@ -77,9 +83,18 @@ def test_aggregation_calculations():
                 print(f"  🎉 All calculations match for {ticker}!")
             else:
                 print(f"  ⚠️  Some calculations don't match for {ticker}")
+                failed_tests.append(f"{ticker}_{timeframe}")
                 
         except Exception as e:
             print(f"  ❌ Error testing {ticker}: {e}")
+            failed_tests.append(f"{ticker}_{timeframe}")
+    
+    if failed_tests:
+        print(f"\n❌ FAILED: {len(failed_tests)} test(s) failed: {', '.join(failed_tests)}")
+        sys.exit(1)
+    else:
+        print("\n✅ All tests passed!")
+        sys.exit(0)
 
 if __name__ == '__main__':
     test_aggregation_calculations()

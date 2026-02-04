@@ -27,7 +27,7 @@ TEST_CONFIG = {
 
 def test_timestamp_precision_conversion():
     """Test timestamp precision conversion with real data from CSV for multiple timeframes."""
-    test_data_dir = '/Users/blitvin/IdeaProjects/quant-research-sample-using-amazon-ecs-and-aws-batch/samples/order_flow_ray/src/tests/feature_engineering/test_data'
+    test_data_dir = os.path.join(current_dir, 'test_data')
     bar_durations = [50, 100, 200, 250, 500, 1000, 5000, 10000]
     
     for bar_duration in bar_durations:
@@ -107,7 +107,7 @@ def sample_raw_data_2min_market_hours():
         ).collect()
         
         # Write to CSV
-        output_path = '/Users/blitvin/IdeaProjects/quant-research-sample-using-amazon-ecs-and-aws-batch/samples/order_flow_ray/src/tests/feature_engineering/spy_sample_60min.csv'
+        output_path = os.path.join(current_dir, 'spy_sample_60min.csv')
         sample_data.write_csv(output_path)
         
         print(f"Sampled {len(sample_data)} records for 60 minutes of SPY data")

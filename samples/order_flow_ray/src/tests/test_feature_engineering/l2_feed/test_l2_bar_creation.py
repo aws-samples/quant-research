@@ -26,30 +26,15 @@ TEST_CONFIG = {
 def test_l2_bar_creation():
     """Test bar creation for L2 quote data."""
     try:
-        # Load L2 quote data
-        s3_access = S3DataAccess(region=TEST_CONFIG['s3_region'], profile_name=TEST_CONFIG['s3_profile'])
-        raw_data = s3_access.read(TEST_CONFIG['s3_quotes_path'])
+        # Load L2 quote data from local test file
+        test_data_path = os.path.join(current_dir, 'test_data', 'raw_l2q_high_activity_periods.csv')
+        raw_data = pl.scan_csv(test_data_path)
         
-        print(f"Loaded L2 quote data: {raw_data.collect().shape}")
+        print(f"Loaded L2 quote data from: {test_data_path}")
         
-        # Test bar creation with specific high-activity sample: CIS SPY at 2024-02-28 14:45:00
-        # Add 5-minute bar_id first to enable filtering by timeframe
+        # Add bar_id with test duration
         data_with_bars = TimeBarFeatureEngineering.bar_time_addition(
             raw_data, 
-            TEST_CONFIG['timestamp_col'], 
-            300000  # 5 minutes for filtering
-        )
-        
-        # Filter for specific timeframe
-        sample_data = data_with_bars.filter(
-            (pl.col('Ticker') == 'SPY') &
-            (pl.col('ISOExchangeCode') == 'CIS') &
-            (pl.col('bar_id_dt').dt.strftime('%Y-%m-%d %H:%M:%S') == '2024-02-28 14:45:00')
-        )
-        
-        # Re-add bar_id with test duration
-        data_with_bars = TimeBarFeatureEngineering.bar_time_addition(
-            sample_data, 
             TEST_CONFIG['timestamp_col'], 
             TEST_CONFIG['bar_duration_ms']
         )
@@ -64,7 +49,7 @@ def test_l2_bar_creation():
             print("✓ Bar columns created successfully")
             
             # Show sample bar data
-            bar_sample = result.select(['TimestampNanoseconds', 'bar_id', 'bar_id_dt', 'bar_duration_ms']).sort('bar_id').head(50)
+            bar_sample = result.select(['TimestampNanoseconds', 'bar_id', 'bar_id_dt', 'bar_duration_ms']).sort('bar_id').head(10)
             print("\nSample bar data:")
             print(bar_sample)
             

@@ -1,5 +1,6 @@
 """Feature engineering with bar aggregation."""
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from typing import Any, List
 import polars as pl
 from .base import TimeBarFeatureEngineering
@@ -29,8 +30,6 @@ class FeatureEngineering(ABC):
         Returns:
             List of file groups, where each group contains [(file_path, size), ...] for same day/region/exchange
         """
-        from collections import defaultdict
-        
         # List all files in normalized directory
         files = data_access.list_files(input_path)
         
@@ -126,8 +125,6 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
     
     def get_failed_items(self, results: List[Any]) -> List[List[tuple[str, int]]]:
         """Extract failed items for retry, maintaining group structure."""
-        from collections import defaultdict
-        
         # Group failed items by their original group key
         failed_groups = defaultdict(list)
         

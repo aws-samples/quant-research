@@ -58,6 +58,75 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
         else:
             trade_eng = TradeFeatureEngineering(self.bar_duration_ms, self.max_retries)
             return trade_eng.feature_computation(data)
+    
+    def discover_files(self, data_access, normalized_data_path: str, sort_order: str) -> list[tuple[str, int]]:
+        """Discover normalized files to process.
+        
+        Args:
+            data_access: Data access instance
+            normalized_data_path: Base path to normalized data
+            sort_order: Sort order - 'asc' or 'desc'
+            
+        Returns:
+            List of (file_path, file_size) tuples sorted by size
+        """
+        files = data_access.list_files(normalized_data_path)
+        files.sort(key=lambda x: x[1], reverse=(sort_order == 'desc'))
+        return files
+    
+    def get_failed_items(self, results: list) -> list[tuple[str, int]]:
+        """Extract failed files from feature engineering results.
+        
+        Args:
+            results: List of feature engineering results
+            
+        Returns:
+            List of (file_path, file_size) tuples that failed
+        """
+        failed = [r for r in results if r['message'] != 'success']
+        return [(r['input_path'], int(r.get('size_gb', 1.0) * (1024**3))) for r in failed]
+    
+    def group_files_for_processing(self, files: list[tuple[str, int]]) -> list[list[tuple[str, int]]]:
+        """Group files by date/region/exchange for batch processing.
+        
+        Args:
+            files: List of (file_path, file_size) tuples
+            
+        Returns:
+            List of file groups, each group contains files for same date/region/exchange
+        """
+        from collections import defaultdict
+        
+        groups = defaultdict(list)
+        
+        for file_path, file_size in files:
+            # Extract date/region/exchange from path
+            # Expected format: .../YYYY/MM/DD/exchange/data_type/file.parquet
+            path_parts = file_path.split('/')
+            
+            # Find date components (YYYY/MM/DD)
+            date_idx = None
+            for i, part in enumerate(path_parts):
+                if len(part) == 4 and part.isdigit() and 2020 <= int(part) <= 2030:
+                    date_idx = i
+                    break
+            
+            if date_idx and date_idx + 2 < len(path_parts):
+                year = path_parts[date_idx]
+                month = path_parts[date_idx + 1]
+                day = path_parts[date_idx + 2]
+                exchange = path_parts[date_idx + 3] if date_idx + 3 < len(path_parts) else 'unknown'
+                region = path_parts[date_idx + 4] if date_idx + 4 < len(path_parts) else 'AMERICAS'
+                
+                group_key = f"{year}{month}{day}_{exchange}_{region}"
+                groups[group_key].append((file_path, file_size))
+            else:
+                # Fallback: use filename as group key
+                filename = path_parts[-1]
+                group_key = filename.split('.')[0]
+                groups[group_key].append((file_path, file_size))
+        
+        return list(groups.values())
 
 
 class L2QFeatureEngineering(FeatureEngineering):

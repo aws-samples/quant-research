@@ -490,12 +490,16 @@ class Pipeline:
         
         return results
     
-    def _feature_engineering_step(self, data: List[List[tuple[str, int]]]) -> Any:
+    def _feature_engineering_step(self, data: list[tuple[str, int]]) -> Any:
         """Execute feature engineering step with retry logic."""
+        # Group files for batch processing
+        feature_engineering = self.config.processing.feature_engineering
+        grouped_data = feature_engineering.group_files_for_processing(data)
+        
         return self._execute_step_with_retry(
             'feature_engineering',
-            data,
-            self.config.processing.feature_engineering,
+            grouped_data,
+            feature_engineering,
             self._run_feature_engineering
         )
     

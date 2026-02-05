@@ -89,19 +89,19 @@ class Pipeline:
         self.initialize()
         try:
             # Always discover files first
-            files = self._discover_files()
+            discovered_files = self._discover_files()
             
             # Filter by specific files if provided
             if specific_files:
                 specific_set = set(specific_files)
-                files = [(path, size) for path, size in files if path in specific_set]
-                print(f"Processing {len(files)} specific files (filtered from discovered)")
+                filtered_files = [(path, size) for path, size in discovered_files if path in specific_set]
+                print(f"Processing {len(filtered_files)} specific files (filtered from discovered)")
             else:
-                files = files[files_slice]  # Apply slice directly
-                print(f"Processing files[{files_slice}]: {len(files)} files")
+                filtered_files = discovered_files[files_slice]  # Apply slice directly
+                print(f"Processing files[{files_slice}]: {len(filtered_files)} files")
             
             # Execute enabled steps
-            data = files
+            data = filtered_files
             
             if self.config.processing.normalization:
                 print("Running normalization...")

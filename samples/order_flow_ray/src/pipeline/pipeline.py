@@ -23,7 +23,7 @@ class Pipeline:
     def _get_active_steps(self) -> list[tuple[str, Any]]:
         """Return list of (step_name, step_instance) for configured steps."""
         steps = []
-        for step_name in ['normalization', 'feature_engineering', 'training', 'inference', 'backtest']:
+        for step_name in ['normalization', 'repartition', 'feature_engineering', 'training', 'inference', 'backtest']:
             step = getattr(self.config.processing, step_name, None)
             if step is not None:
                 steps.append((step_name, step))

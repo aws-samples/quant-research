@@ -88,12 +88,15 @@ class Pipeline:
         """
         self.initialize()
         try:
-            # Discover or use specific files
+            # Always discover files first
+            files = self._discover_files()
+            
+            # Filter by specific files if provided
             if specific_files:
-                files = [(path, 0) for path in specific_files]  # Size not needed for specific files
-                print(f"Processing {len(files)} specific files")
+                specific_set = set(specific_files)
+                files = [(path, size) for path, size in files if path in specific_set]
+                print(f"Processing {len(files)} specific files (filtered from discovered)")
             else:
-                files = self._discover_files()
                 files = files[files_slice]  # Apply slice directly
                 print(f"Processing files[{files_slice}]: {len(files)} files")
             

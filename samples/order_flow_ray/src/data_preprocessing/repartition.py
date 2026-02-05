@@ -49,10 +49,11 @@ class Repartition:
         """
         print(f"[REPARTITION] Processing trades file: {source_path}")
         partition_keys = df.select(['TradeDate', 'ExchangeTicker', 'Ticker', 'ISOExchangeCode', 'MIC', 'OPOL', 'ExecutionVenue']).unique().collect(streaming=True)
-        print(f"[REPARTITION] Found {len(partition_keys)} unique partitions in {source_path}")
+        total_partitions = len(partition_keys)
+        print(f"[REPARTITION] Found {total_partitions} unique partitions in {source_path}")
         
         results = []
-        for row in partition_keys.iter_rows(named=True):
+        for idx, row in enumerate(partition_keys.iter_rows(named=True), 1):
             partition_df = df.filter(
                 (pl.col('TradeDate') == row['TradeDate']) &
                 (pl.col('ExchangeTicker') == row['ExchangeTicker']) &
@@ -69,7 +70,10 @@ class Repartition:
             
             data_access.write(partition_df, output_path)
             row_count = partition_df.select(pl.len()).collect().item()
-            print(f"[REPARTITION] Wrote partition {partition_path}: {row_count} rows -> {output_path}")
+            
+            # Log every 1000 partitions
+            if idx % 1000 == 0 or idx == total_partitions:
+                print(f"[REPARTITION] Progress: {idx}/{total_partitions} partitions written. Last: {partition_path} ({row_count} rows)")
             
             try:
                 output_size_mb = data_access.get_file_size(output_path) / (1024 ** 2)
@@ -99,10 +103,11 @@ class Repartition:
         """
         print(f"[REPARTITION] Processing L2Q file: {source_path}")
         partition_keys = df.select(['TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker']).unique().collect(streaming=True)
-        print(f"[REPARTITION] Found {len(partition_keys)} unique partitions in {source_path}")
+        total_partitions = len(partition_keys)
+        print(f"[REPARTITION] Found {total_partitions} unique partitions in {source_path}")
         
         results = []
-        for row in partition_keys.iter_rows(named=True):
+        for idx, row in enumerate(partition_keys.iter_rows(named=True), 1):
             partition_df = df.filter(
                 (pl.col('TradeDate') == row['TradeDate']) &
                 (pl.col('Ticker') == row['Ticker']) &
@@ -117,7 +122,10 @@ class Repartition:
             
             data_access.write(partition_df, output_path)
             row_count = partition_df.select(pl.len()).collect().item()
-            print(f"[REPARTITION] Wrote partition {partition_path}: {row_count} rows -> {output_path}")
+            
+            # Log every 1000 partitions
+            if idx % 1000 == 0 or idx == total_partitions:
+                print(f"[REPARTITION] Progress: {idx}/{total_partitions} partitions written. Last: {partition_path} ({row_count} rows)")
             
             try:
                 output_size_mb = data_access.get_file_size(output_path) / (1024 ** 2)

@@ -61,8 +61,9 @@ class Repartition:
                 (pl.col('ExecutionVenue') == row['ExecutionVenue'])
             )
             
-            partition_value = row[self.partition_column]
-            output_path = f"{output_path_base}/{partition_value}/{source_path.split('/')[-1]}"
+            # Build partition path: Ticker/ISOExchangeCode/MIC/OPOL/ExecutionVenue
+            partition_path = f"{row['Ticker']}/{row['ISOExchangeCode']}/{row['MIC']}/{row['OPOL']}/{row['ExecutionVenue']}"
+            output_path = f"{output_path_base}/{partition_path}/{source_path.split('/')[-1]}"
             
             data_access.write(partition_df, output_path)
             row_count = partition_df.select(pl.len()).collect().item()
@@ -76,7 +77,7 @@ class Repartition:
                 'output_path': output_path,
                 'row_count': row_count,
                 'output_size_mb': output_size_mb,
-                'partition_value': partition_value
+                'partition_value': partition_path
             })
         
         return results
@@ -105,8 +106,9 @@ class Repartition:
                 (pl.col('ExchangeTicker') == row['ExchangeTicker'])
             )
             
-            partition_value = row[self.partition_column]
-            output_path = f"{output_path_base}/{partition_value}/{source_path.split('/')[-1]}"
+            # Build partition path: Ticker/ISOExchangeCode/MIC
+            partition_path = f"{row['Ticker']}/{row['ISOExchangeCode']}/{row['MIC']}"
+            output_path = f"{output_path_base}/{partition_path}/{source_path.split('/')[-1]}"
             
             data_access.write(partition_df, output_path)
             row_count = partition_df.select(pl.len()).collect().item()
@@ -120,7 +122,7 @@ class Repartition:
                 'output_path': output_path,
                 'row_count': row_count,
                 'output_size_mb': output_size_mb,
-                'partition_value': partition_value
+                'partition_value': partition_path
             })
         
         return results

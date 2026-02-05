@@ -47,7 +47,9 @@ class Repartition:
         Returns:
             List of result dicts for each partition written
         """
-        partition_keys = df.select(['TradeDate', 'ExchangeTicker', 'Ticker', 'ISOExchangeCode', 'MIC', 'OPOL', 'ExecutionVenue']).unique().collect()
+        print(f"[REPARTITION] Processing trades file: {source_path}")
+        partition_keys = df.select(['TradeDate', 'ExchangeTicker', 'Ticker', 'ISOExchangeCode', 'MIC', 'OPOL', 'ExecutionVenue']).unique().collect(streaming=True)
+        print(f"[REPARTITION] Found {len(partition_keys)} unique partitions in {source_path}")
         
         results = []
         for row in partition_keys.iter_rows(named=True):
@@ -67,6 +69,7 @@ class Repartition:
             
             data_access.write(partition_df, output_path)
             row_count = partition_df.select(pl.len()).collect().item()
+            print(f"[REPARTITION] Wrote partition {partition_path}: {row_count} rows -> {output_path}")
             
             try:
                 output_size_mb = data_access.get_file_size(output_path) / (1024 ** 2)
@@ -94,7 +97,9 @@ class Repartition:
         Returns:
             List of result dicts for each partition written
         """
-        partition_keys = df.select(['TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker']).unique().collect()
+        print(f"[REPARTITION] Processing L2Q file: {source_path}")
+        partition_keys = df.select(['TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker']).unique().collect(streaming=True)
+        print(f"[REPARTITION] Found {len(partition_keys)} unique partitions in {source_path}")
         
         results = []
         for row in partition_keys.iter_rows(named=True):
@@ -112,6 +117,7 @@ class Repartition:
             
             data_access.write(partition_df, output_path)
             row_count = partition_df.select(pl.len()).collect().item()
+            print(f"[REPARTITION] Wrote partition {partition_path}: {row_count} rows -> {output_path}")
             
             try:
                 output_size_mb = data_access.get_file_size(output_path) / (1024 ** 2)

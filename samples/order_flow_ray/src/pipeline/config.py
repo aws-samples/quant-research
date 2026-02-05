@@ -79,6 +79,7 @@ class StorageConfig:
     Args:
         raw_data: Input data location
         normalized: Normalized data location
+        repartitioned: Repartitioned data location
         features: Feature data location
         models: Model storage location
         predictions: Predictions storage location
@@ -86,6 +87,7 @@ class StorageConfig:
     """
     raw_data: StorageLocation
     normalized: StorageLocation
+    repartitioned: StorageLocation
     features: StorageLocation
     models: StorageLocation
     predictions: StorageLocation
@@ -94,10 +96,13 @@ class StorageConfig:
     def get_step_input_output(self, step_instance) -> tuple[StorageLocation, StorageLocation]:
         """Return (input_location, output_location) for a given step instance."""
         from data_preprocessing.data_normalization import BMLLNormalizer
+        from data_preprocessing.repartition import Repartition
         from feature_engineering.order_flow import OrderFlowFeatureEngineering
         
         if isinstance(step_instance, BMLLNormalizer):
             return (self.raw_data, self.normalized)
+        elif isinstance(step_instance, Repartition):
+            return (self.normalized, self.repartitioned)
         elif isinstance(step_instance, OrderFlowFeatureEngineering):
             return (self.normalized, self.features)
         else:
@@ -148,12 +153,14 @@ class ProcessingConfig:
     
     Args:
         normalization: Normalizer instance or None
+        repartition: Repartition instance or None
         feature_engineering: FeatureEngineer instance or None
         training: Trainer instance or None
         inference: Predictor instance or None
         backtest: Backtester instance or None
     """
     normalization: Any | None = None
+    repartition: Any | None = None
     feature_engineering: Any | None = None
     training: Any | None = None
     inference: Any | None = None

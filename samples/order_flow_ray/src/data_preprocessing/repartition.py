@@ -87,6 +87,7 @@ class Repartition:
                 'partition_value': partition_path
             })
         
+        print(f"[REPARTITION] Completed {source_path}: {total_partitions} partitions written")
         return results
     
     def repartition_l2q(self, df: pl.LazyFrame, source_path: str, data_access, output_path_base: str) -> list[dict]:
@@ -139,6 +140,7 @@ class Repartition:
                 'partition_value': partition_path
             })
         
+        print(f"[REPARTITION] Completed {source_path}: {total_partitions} partitions written")
         return results
     
     def repartition(self, df: pl.LazyFrame, source_path: str, data_access, output_path_base: str) -> list[dict]:

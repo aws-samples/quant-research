@@ -54,6 +54,9 @@ class Repartition:
         
         results = []
         for idx, row in enumerate(partition_keys.iter_rows(named=True), 1):
+            import time
+            partition_start = time.time()
+            
             partition_df = df.filter(
                 (pl.col('TradeDate') == row['TradeDate']) &
                 (pl.col('ExchangeTicker') == row['ExchangeTicker']) &
@@ -71,9 +74,11 @@ class Repartition:
             data_access.write(partition_df, output_path)
             row_count = partition_df.select(pl.len()).collect().item()
             
+            partition_time = time.time() - partition_start
+            
             # Log every 1000 partitions
             if idx % 1000 == 0 or idx == total_partitions:
-                print(f"[REPARTITION] Progress: {idx}/{total_partitions} partitions written. Last: {partition_path} ({row_count} rows)")
+                print(f"[REPARTITION] Progress: {idx}/{total_partitions} partitions written. Last: {partition_path} ({row_count} rows, {partition_time:.2f}s)")
             
             try:
                 output_size_mb = data_access.get_file_size(output_path) / (1024 ** 2)

@@ -64,12 +64,12 @@ class S3DataAccess(DataAccess):
         
         return files
     
-    def list_files_asynch(self, s3_path: str, dir_depth: int = 4) -> List[Tuple[str, float]]:
-        """List files with parallel discovery at specified depth.
+    def list_files_asynch(self, s3_path: str, parallel_discovery_threshold: int = 100) -> List[Tuple[str, float]]:
+        """List files with parallel discovery when threshold is reached.
         
         Args:
             s3_path: Base S3 path
-            dir_depth: Directory depth for sequential discovery before parallelization
+            parallel_discovery_threshold: Switch to parallel when prefix count exceeds this
         
         Returns:
             List of (file_path, size_gb) tuples
@@ -85,18 +85,22 @@ class S3DataAccess(DataAccess):
         
         s3_client = self._get_s3_client()
         
-        # Discover prefixes at target depth
+        # Discover prefixes until threshold is reached
         prefixes = [base_prefix]
-        for _ in range(dir_depth):
+        depth = 0
+        while len(prefixes) < parallel_discovery_threshold:
             new_prefixes = []
             for prefix in prefixes:
                 paginator = s3_client.get_paginator('list_objects_v2')
                 for page in paginator.paginate(Bucket=bucket, Prefix=prefix, Delimiter='/'):
                     if 'CommonPrefixes' in page:
                         new_prefixes.extend([cp['Prefix'] for cp in page['CommonPrefixes']])
+            if not new_prefixes:
+                break
             prefixes = new_prefixes
+            depth += 1
         
-        print(f"Sequential discovery complete: found {len(prefixes)} directories at depth {dir_depth}")
+        print(f"Sequential discovery complete: found {len(prefixes)} directories at depth {depth}")
         print(f"Starting parallel file listing...")
         
         # List files in parallel

@@ -96,7 +96,8 @@ class S3DataAccess(DataAccess):
                         new_prefixes.extend([cp['Prefix'] for cp in page['CommonPrefixes']])
             prefixes = new_prefixes
         
-        print(f"Discovered {len(prefixes)} directories at depth {dir_depth}")
+        print(f"Sequential discovery complete: found {len(prefixes)} directories at depth {dir_depth}")
+        print(f"Starting parallel file listing...")
         
         # List files in parallel
         async def _list_prefix(prefix: str) -> List[Tuple[str, float]]:

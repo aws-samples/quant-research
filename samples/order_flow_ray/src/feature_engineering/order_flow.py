@@ -62,6 +62,7 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
         Returns:
             List of (file_path, file_size) tuples sorted by size
         """
+        print(f"Discovering files in: {normalized_data_path}")
         files = data_access.list_files(normalized_data_path)
         files.sort(key=lambda x: x[1], reverse=(sort_order == 'desc'))
         return files

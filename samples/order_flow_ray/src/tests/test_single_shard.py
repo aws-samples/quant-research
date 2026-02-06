@@ -30,7 +30,7 @@ def test_single_shard():
     # Discover files
     print("Discovering files...")
     data_access = DataAccessFactory.create('s3', region=REGION, profile_name=PROFILE)
-    discovered_files = fe.discover_files(data_access, 's3://orderflowanalysis/intermediate/normalized', 'desc')
+    discovered_files = fe.discover_files(data_access, 's3://orderflowanalysis/intermediate/repartitioned', 'desc')
     sort_order='desc'
     discovered_files.sort(key=lambda x: x[1], reverse=(sort_order == 'desc'))
     print(f"Found {len(discovered_files)} files")

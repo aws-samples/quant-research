@@ -8,7 +8,12 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 SRC_DIR="$(dirname "$SCRIPT_DIR")"
 
 # Default values
-RAY_ADDRESS="${RAY_ADDRESS:-auto}"
+RAY_ADDRESS="${RAY_ADDRESS}"
+if [ -z "$RAY_ADDRESS" ]; then
+  echo "Error: RAY_ADDRESS environment variable must be set"
+  echo "Example: export RAY_ADDRESS='http://your-cluster:8265'"
+  exit 1
+fi
 JOB_NAME="${JOB_NAME:-bmll-dataprep-$(date +%Y%m%d-%H%M%S)}"
 SPECIFIC_FILES="${2:-}"
 

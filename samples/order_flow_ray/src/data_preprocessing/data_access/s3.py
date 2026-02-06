@@ -64,6 +64,61 @@ class S3DataAccess(DataAccess):
         
         return files
     
+    def list_files_asynch(self, s3_path: str, dir_depth: int = 4) -> List[Tuple[str, float]]:
+        """List files with parallel discovery at specified depth.
+        
+        Args:
+            s3_path: Base S3 path
+            dir_depth: Directory depth for sequential discovery before parallelization
+        
+        Returns:
+            List of (file_path, size_gb) tuples
+        """
+        import asyncio
+        
+        if not s3_path.startswith('s3://'):
+            raise ValueError("Path must start with s3://")
+        
+        path_parts = s3_path[5:].split('/', 1)
+        bucket = path_parts[0]
+        base_prefix = path_parts[1].rstrip('/') + '/' if len(path_parts) > 1 else ''
+        
+        s3_client = self._get_s3_client()
+        
+        # Discover prefixes at target depth
+        prefixes = [base_prefix]
+        for _ in range(dir_depth):
+            new_prefixes = []
+            for prefix in prefixes:
+                paginator = s3_client.get_paginator('list_objects_v2')
+                for page in paginator.paginate(Bucket=bucket, Prefix=prefix, Delimiter='/'):
+                    if 'CommonPrefixes' in page:
+                        new_prefixes.extend([cp['Prefix'] for cp in page['CommonPrefixes']])
+            prefixes = new_prefixes
+        
+        print(f"Discovered {len(prefixes)} directories at depth {dir_depth}")
+        
+        # List files in parallel
+        async def _list_prefix(prefix: str) -> List[Tuple[str, float]]:
+            loop = asyncio.get_event_loop()
+            def _list():
+                files = []
+                paginator = s3_client.get_paginator('list_objects_v2')
+                for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+                    if 'Contents' in page:
+                        for obj in page['Contents']:
+                            if not obj['Key'].endswith('/'):
+                                files.append((f"s3://{bucket}/{obj['Key']}", obj['Size'] / (1024 ** 3)))
+                return files
+            return await loop.run_in_executor(None, _list)
+        
+        async def _list_all():
+            tasks = [_list_prefix(prefix) for prefix in prefixes]
+            results = await asyncio.gather(*tasks)
+            return [file for sublist in results for file in sublist]
+        
+        return asyncio.run(_list_all())
+    
     def read(self, s3_path: str, **kwargs) -> pl.LazyFrame:
         """Read parquet from S3 path."""
         storage_options = self._get_storage_options()

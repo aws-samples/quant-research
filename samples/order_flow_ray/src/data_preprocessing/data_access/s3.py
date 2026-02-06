@@ -85,6 +85,8 @@ class S3DataAccess(DataAccess):
         
         s3_client = self._get_s3_client()
         
+        print(f"Starting sequential directory discovery...")
+        
         # Discover prefixes until threshold is reached
         prefixes = [base_prefix]
         depth = 0

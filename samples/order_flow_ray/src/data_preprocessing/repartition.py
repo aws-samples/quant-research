@@ -6,15 +6,17 @@ import polars as pl
 class Repartition:
     """Repartition data by adding partition key to S3 path structure."""
     
-    def __init__(self, partition_column: str = 'Ticker', max_retries: int = 3):
+    def __init__(self, partition_column: str = 'Ticker', max_retries: int = 3, log_interval: int = 1000):
         """Initialize repartition with partition column and retry configuration.
         
         Args:
             partition_column: Column name to partition by (e.g., 'Ticker', 'Model', 'Strategy')
             max_retries: Maximum retry attempts for failed files
+            log_interval: Log progress every N partitions
         """
         self.partition_column = partition_column
         self.max_retries = max_retries
+        self.log_interval = log_interval
     
     def discover_files(self, data_access, input_path: str, file_sort_order: str) -> List[Tuple[str, int]]:
         """Discover parquet files for repartitioning from any pipeline stage.
@@ -76,8 +78,8 @@ class Repartition:
             
             partition_time = time.time() - partition_start
             
-            # Log every 1000 partitions
-            if idx % 1000 == 0 or idx == total_partitions:
+            # Log every N partitions
+            if idx % self.log_interval == 0 or idx == total_partitions:
                 print(f"[REPARTITION] Progress: {idx}/{total_partitions} partitions written. Last: {partition_path} ({row_count} rows, {partition_time:.2f}s)")
             
             try:
@@ -134,8 +136,8 @@ class Repartition:
             
             partition_time = time.time() - partition_start
             
-            # Log every 1000 partitions
-            if idx % 1000 == 0 or idx == total_partitions:
+            # Log every N partitions
+            if idx % self.log_interval == 0 or idx == total_partitions:
                 print(f"[REPARTITION] Progress: {idx}/{total_partitions} partitions written. Last: {partition_path} ({row_count} rows, {partition_time:.2f}s)")
             
             try:

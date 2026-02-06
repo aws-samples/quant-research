@@ -8,15 +8,17 @@ from .base import TimeBarFeatureEngineering
 class FeatureEngineering(ABC):
     """Base class for feature engineering with configurable bar aggregation."""
     
-    def __init__(self, bar_duration_ms: int = 1000, max_retries: int = 3):
+    def __init__(self, bar_duration_ms: int = 1000, max_retries: int = 3, discovery_mode: str = 'asynch'):
         """Feature engineering initialization.
         
         Args:
             bar_duration_ms: Bar duration in milliseconds
             max_retries: Maximum retry attempts
+            discovery_mode: 'synch' or 'asynch' for file discovery
         """
         self.bar_duration_ms = bar_duration_ms
         self.max_retries = max_retries
+        self.discovery_mode = discovery_mode
     
     @abstractmethod
     def feature_computation(self, data: pl.LazyFrame) -> pl.LazyFrame:
@@ -62,6 +64,9 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
         Returns:
             List of (file_path, file_size) tuples sorted by size
         """
+        if self.discovery_mode == 'asynch':
+            return self.discover_files_asynch(data_access, normalized_data_path, sort_order)
+        
         print(f"Discovering files in: {normalized_data_path}")
         files = data_access.list_files(normalized_data_path)
         files.sort(key=lambda x: x[1], reverse=(sort_order == 'desc'))

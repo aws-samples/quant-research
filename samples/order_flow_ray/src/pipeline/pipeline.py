@@ -384,6 +384,10 @@ class Pipeline:
         input_base_path = self.config.storage.get_step_input(repartition).get_path()
         memory_multiplier = self.config.ray.memory_multiplier
         
+        # Group files by size
+        file_groups = self.data_access.group_files_by_size(files)
+        print(f"Grouped {len(files)} files into {len(file_groups)} groups")
+        
         # Serialize repartitioned location once
         repart_dict = {
             'access_type': repartitioned_loc.get_access_type(),
@@ -391,80 +395,82 @@ class Pipeline:
         }
         
         # Helper function to submit a task
-        def submit_task(file_path, file_size):
+        def submit_task(file_group):
+            group_size = sum(size for _, size in file_group)
             if self.config.ray.flat_core_count is not None:
                 num_cpus = self.config.ray.flat_core_count
                 memory_gb = num_cpus * self.config.ray.memory_per_core_gb
             else:
-                memory_bytes = int(file_size * memory_multiplier)
+                memory_bytes = int(group_size * memory_multiplier)
                 memory_gb = memory_bytes / (1024 ** 3)
                 num_cpus = ceil(memory_gb / self.config.ray.memory_per_core_gb) + self.config.ray.cpu_buffer
             
             @ray.remote(num_cpus=num_cpus, max_retries=0)
-            def repartition_file(fp: str, fs: float, region: str, input_base: str, repart_loc_dict: dict, partition_col: str, max_retries: int, log_interval: int, mem_gb: float, cpus: int, profile: str) -> list[dict]:
+            def repartition_file_group(file_group: list[tuple[str, float]], region: str, input_base: str, repart_loc_dict: dict, partition_col: str, max_retries: int, log_interval: int, mem_gb: float, cpus: int, profile: str) -> list[dict]:
                 results = []
-                try:
-                    import polars as pl
-                    from data_preprocessing.data_access.factory import DataAccessFactory
-                    from data_preprocessing.repartition import Repartition
-                    
-                    # Extract data_type from path
-                    parts = fp.split('/')
-                    data_type = parts[-3] if len(parts) >= 3 else 'trades'
-                    
-                    # Read input data as LazyFrame
-                    data_access = DataAccessFactory.create('s3', region=region, profile_name=profile)
-                    df = data_access.read(fp)
-                    
-                    # Build output path base (without partition key)
-                    _, relative_path = fp.split(input_base.rstrip('/') + '/', 1)
-                    path_parts = relative_path.split('/')
-                    output_path_base = f"{repart_loc_dict['path'].rstrip('/')}/{'/'.join(path_parts[:-1])}"
-                    
-                    # Repartition and write - returns list of result dicts
-                    repart = Repartition(partition_column=partition_col, max_retries=max_retries, log_interval=log_interval)
-                    partition_results = repart.repartition(df, fp, data_access, output_path_base)
-                    
-                    # Add common fields to each result
-                    for result in partition_results:
-                        result.update({
+                for fp, fs in file_group:
+                    try:
+                        import polars as pl
+                        from data_preprocessing.data_access.factory import DataAccessFactory
+                        from data_preprocessing.repartition import Repartition
+                        
+                        # Extract data_type from path
+                        parts = fp.split('/')
+                        data_type = parts[-3] if len(parts) >= 3 else 'trades'
+                        
+                        # Read input data as LazyFrame
+                        data_access = DataAccessFactory.create('s3', region=region, profile_name=profile)
+                        df = data_access.read(fp)
+                        
+                        # Build output path base (without partition key)
+                        _, relative_path = fp.split(input_base.rstrip('/') + '/', 1)
+                        path_parts = relative_path.split('/')
+                        output_path_base = f"{repart_loc_dict['path'].rstrip('/')}/{'/'.join(path_parts[:-1])}"
+                        
+                        # Repartition and write - returns list of result dicts
+                        repart = Repartition(partition_column=partition_col, max_retries=max_retries, log_interval=log_interval)
+                        partition_results = repart.repartition(df, fp, data_access, output_path_base)
+                        
+                        # Add common fields to each result
+                        for result in partition_results:
+                            result.update({
+                                'file': fp.split('/')[-1],
+                                'size_gb': fs,
+                                'memory_gb': mem_gb,
+                                'cpus': cpus,
+                                'input_path': fp,
+                                'data_type': data_type,
+                                'stage': 'repartition',
+                                'message': 'success'
+                            })
+                            results.append(result)
+                        
+                    except Exception as e:
+                        results.append({
                             'file': fp.split('/')[-1],
                             'size_gb': fs,
                             'memory_gb': mem_gb,
                             'cpus': cpus,
                             'input_path': fp,
-                            'data_type': data_type,
+                            'output_path': None,
+                            'row_count': None,
+                            'output_size_mb': 0,
+                            'data_type': parts[-3] if len(parts := fp.split('/')) >= 3 else 'unknown',
+                            'partition_value': None,
                             'stage': 'repartition',
-                            'message': 'success'
+                            'message': str(e)
                         })
-                        results.append(result)
-                    
-                except Exception as e:
-                    results.append({
-                        'file': fp.split('/')[-1],
-                        'size_gb': fs,
-                        'memory_gb': mem_gb,
-                        'cpus': cpus,
-                        'input_path': fp,
-                        'output_path': None,
-                        'row_count': None,
-                        'output_size_mb': 0,
-                        'data_type': parts[-3] if len(parts := fp.split('/')) >= 3 else 'unknown',
-                        'partition_value': None,
-                        'stage': 'repartition',
-                        'message': str(e)
-                    })
                 
                 return results
             
-            future = repartition_file.remote(
-                file_path, file_size, self.config.region, input_base_path,
+            future = repartition_file_group.remote(
+                file_group, self.config.region, input_base_path,
                 repart_dict, repartition.partition_column, repartition.max_retries, repartition.log_interval, memory_gb, num_cpus, self.config.profile_name
             )
             return future
         
         # Submit all tasks and wait for completion
-        futures = [submit_task(file_path, file_size) for file_path, file_size in files]
+        futures = [submit_task(file_group) for file_group in file_groups]
         group_results = ray.get(futures)
         
         # Flatten results

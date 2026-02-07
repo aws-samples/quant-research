@@ -180,3 +180,35 @@ class S3DataAccess(DataAccess):
         """Write parquet to S3 path."""
         storage_options = self._get_storage_options()
         data.sink_parquet(s3_path, storage_options=storage_options, **kwargs)
+    
+    def group_files_by_size(self, files: List[Tuple[str, int]]) -> List[List[Tuple[str, int]]]:
+        """Group files into subarrays where each subarray has total size approximately equal to max file size.
+        
+        Args:
+            files: List of (file_path, file_size) tuples
+            
+        Returns:
+            List of file groups, where each group's total size is approximately the max file size
+        """
+        if not files:
+            return []
+        
+        max_size = max(size for _, size in files)
+        
+        groups = []
+        current_group = []
+        current_size = 0
+        
+        for file_path, file_size in files:
+            if current_size + file_size > max_size and current_group:
+                groups.append(current_group)
+                current_group = []
+                current_size = 0
+            
+            current_group.append((file_path, file_size))
+            current_size += file_size
+        
+        if current_group:
+            groups.append(current_group)
+        
+        return groups

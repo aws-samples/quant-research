@@ -24,35 +24,25 @@ def main():
     config = PipelineConfig(
         region='us-east-1',
         data=DataConfig(
-            raw_data_path='s3://bmlldata',
-            start_date='2024-01-02',
-            end_date='2024-01-02',
-            exchanges=['ARCX'],
-            data_types=['trades', 'level2q']
+            raw_data_path='s3://orderflowanalysis/intermediate/normalized',
+            start_date='2024-05-03',
+            end_date='2024-05-03',
+            exchanges=['AMERICAS'],
+            data_types=['trades']
         ),
         processing=ProcessingConfig(
-            repartition=Repartition(partition_column='Ticker', max_retries=3, log_interval=1000)
+            repartition=Repartition(partition_column='Ticker', max_retries=3, log_interval=1)
         ),
         storage=StorageConfig(
-            raw_data=S3Location(path='s3://bmlldata'),
+            raw_data=S3Location(path='s3://orderflowanalysis/intermediate/normalized'),
             normalized=S3Location(path='s3://orderflowanalysis/intermediate/normalized'),
-            repartitioned=S3Location(path='s3://orderflowanalysis/intermediate/repartitioned'),
+            repartitioned=S3Location(path='s3://orderflowanalysis/intermediate/repartitioned_v2'),
             features=S3Location(path='s3://orderflowanalysis/intermediate/features'),
             models=S3Location(path='s3://orderflowanalysis/output/models'),
             predictions=S3Location(path='s3://orderflowanalysis/output/predictions'),
             backtest=S3Location(path='s3://orderflowanalysis/output/backtest')
         ),
-        ray=RayConfig(
-            runtime_env={"working_dir": src_dir},
-            flat_core_count=5,
-            memory_multiplier=2.0,
-            memory_per_core_gb=4.0,
-            max_retries=5,
-            cpu_buffer=1,
-            file_sort_order="desc",
-            pending_tasks_cpu_multiplier=1.1,
-            skip_runtime_env=True
-        )
+        ray=RayConfig(runtime_env={"working_dir": src_dir}, flat_core_count=3)
     )
     
     # Run pipeline

@@ -83,7 +83,7 @@ class Repartition:
             
             # Log every N partitions
             if idx % self.log_interval == 0 or idx == total_partitions:
-                print(f"[REPARTITION] Progress: {idx}/{total_partitions} partitions written. Last: {partition_path} ({row_count} rows, {partition_time:.2f}s)")
+                print(f"[REPARTITION] Progress: {idx}/{total_partitions} partitions written. Last: {output_path} ({row_count} rows, {partition_time:.2f}s)")
             
             try:
                 output_size_mb = data_access.get_file_size(output_path) / (1024 ** 2)
@@ -97,7 +97,7 @@ class Repartition:
                 'partition_value': partition_path
             })
         
-        print(f"[REPARTITION] Completed {source_path}: {total_partitions} partitions written")
+        print(f"[REPARTITION] Completed {source_path}: {total_partitions} partitions written to {output_path_base}")
         return results
     
     def repartition_l2q(self, df: pl.LazyFrame, source_path: str, data_access, output_path_base: str) -> list[dict]:
@@ -144,7 +144,7 @@ class Repartition:
             
             # Log every N partitions
             if idx % self.log_interval == 0 or idx == total_partitions:
-                print(f"[REPARTITION] Progress: {idx}/{total_partitions} partitions written. Last: {partition_path} ({row_count} rows, {partition_time:.2f}s)")
+                print(f"[REPARTITION] Progress: {idx}/{total_partitions} partitions written. Last: {output_path} ({row_count} rows, {partition_time:.2f}s)")
             
             try:
                 output_size_mb = data_access.get_file_size(output_path) / (1024 ** 2)
@@ -158,7 +158,7 @@ class Repartition:
                 'partition_value': partition_path
             })
         
-        print(f"[REPARTITION] Completed {source_path}: {total_partitions} partitions written")
+        print(f"[REPARTITION] Completed {source_path}: {total_partitions} partitions written to {output_path_base}")
         return results
     
     def repartition(self, df: pl.LazyFrame, source_path: str, data_access, output_path_base: str) -> list[dict]:

@@ -42,7 +42,7 @@ def main():
             predictions=S3Location(path='s3://orderflowanalysis/output/predictions'),
             backtest=S3Location(path='s3://orderflowanalysis/output/backtest')
         ),
-        ray=RayConfig(runtime_env={"working_dir": src_dir}, flat_core_count=3)
+        ray=RayConfig(runtime_env={}, flat_core_count=3)
     )
     
     # Run pipeline

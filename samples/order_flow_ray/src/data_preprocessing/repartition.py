@@ -50,7 +50,11 @@ class Repartition:
             List of result dicts for each partition written
         """
         print(f"[REPARTITION] Processing trades file: {source_path}")
-        partition_keys = df.select(['TradeDate', 'ExchangeTicker', 'Ticker', 'ISOExchangeCode', 'MIC', 'OPOL', 'ExecutionVenue']).unique().collect(streaming=True)
+        
+        # Add TickerPrefix column (first letter of Ticker)
+        df = df.with_columns(pl.col('Ticker').str.slice(0, 1).str.to_uppercase().alias('TickerPrefix'))
+        
+        partition_keys = df.select(['TradeDate', 'ExchangeTicker', 'TickerPrefix', 'ISOExchangeCode', 'MIC', 'OPOL', 'ExecutionVenue']).unique().collect(streaming=True)
         total_partitions = len(partition_keys)
         print(f"[REPARTITION] Found {total_partitions} unique partitions in {source_path}")
         
@@ -62,15 +66,15 @@ class Repartition:
             partition_df = df.filter(
                 (pl.col('TradeDate') == row['TradeDate']) &
                 (pl.col('ExchangeTicker') == row['ExchangeTicker']) &
-                (pl.col('Ticker') == row['Ticker']) &
+                (pl.col('TickerPrefix') == row['TickerPrefix']) &
                 (pl.col('ISOExchangeCode') == row['ISOExchangeCode']) &
                 (pl.col('MIC') == row['MIC']) &
                 (pl.col('OPOL') == row['OPOL']) &
                 (pl.col('ExecutionVenue') == row['ExecutionVenue'])
             )
             
-            # Build partition path: Ticker/ISOExchangeCode/MIC/OPOL/ExecutionVenue
-            partition_path = f"{row['Ticker']}/{row['ISOExchangeCode']}/{row['MIC']}/{row['OPOL']}/{row['ExecutionVenue']}"
+            # Build partition path: TickerPrefix/ISOExchangeCode/MIC/OPOL/ExecutionVenue
+            partition_path = f"{row['TickerPrefix']}/{row['ISOExchangeCode']}/{row['MIC']}/{row['OPOL']}/{row['ExecutionVenue']}"
             output_path = f"{output_path_base}/{partition_path}/{source_path.split('/')[-1]}"
             
             data_access.write(partition_df, output_path)
@@ -110,7 +114,11 @@ class Repartition:
             List of result dicts for each partition written
         """
         print(f"[REPARTITION] Processing L2Q file: {source_path}")
-        partition_keys = df.select(['TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker']).unique().collect(streaming=True)
+        
+        # Add TickerPrefix column (first letter of Ticker)
+        df = df.with_columns(pl.col('Ticker').str.slice(0, 1).str.to_uppercase().alias('TickerPrefix'))
+        
+        partition_keys = df.select(['TradeDate', 'TickerPrefix', 'ISOExchangeCode', 'MIC', 'ExchangeTicker']).unique().collect(streaming=True)
         total_partitions = len(partition_keys)
         print(f"[REPARTITION] Found {total_partitions} unique partitions in {source_path}")
         
@@ -121,14 +129,14 @@ class Repartition:
             
             partition_df = df.filter(
                 (pl.col('TradeDate') == row['TradeDate']) &
-                (pl.col('Ticker') == row['Ticker']) &
+                (pl.col('TickerPrefix') == row['TickerPrefix']) &
                 (pl.col('ISOExchangeCode') == row['ISOExchangeCode']) &
                 (pl.col('MIC') == row['MIC']) &
                 (pl.col('ExchangeTicker') == row['ExchangeTicker'])
             )
             
-            # Build partition path: Ticker/ISOExchangeCode/MIC
-            partition_path = f"{row['Ticker']}/{row['ISOExchangeCode']}/{row['MIC']}"
+            # Build partition path: TickerPrefix/ISOExchangeCode/MIC
+            partition_path = f"{row['TickerPrefix']}/{row['ISOExchangeCode']}/{row['MIC']}"
             output_path = f"{output_path_base}/{partition_path}/{source_path.split('/')[-1]}"
             
             data_access.write(partition_df, output_path)

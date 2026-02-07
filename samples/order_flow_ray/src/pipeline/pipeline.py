@@ -401,7 +401,7 @@ class Pipeline:
                 num_cpus = ceil(memory_gb / self.config.ray.memory_per_core_gb) + self.config.ray.cpu_buffer
             
             @ray.remote(num_cpus=num_cpus, max_retries=0)
-            def repartition_file(fp: str, fs: float, region: str, input_base: str, repart_loc_dict: dict, partition_col: str, mem_gb: float, cpus: int, profile: str) -> list[dict]:
+            def repartition_file(fp: str, fs: float, region: str, input_base: str, repart_loc_dict: dict, partition_col: str, max_retries: int, log_interval: int, mem_gb: float, cpus: int, profile: str) -> list[dict]:
                 results = []
                 try:
                     import polars as pl
@@ -422,7 +422,7 @@ class Pipeline:
                     output_path_base = f"{repart_loc_dict['path'].rstrip('/')}/{'/'.join(path_parts[:-1])}"
                     
                     # Repartition and write - returns list of result dicts
-                    repart = Repartition(partition_column=partition_col)
+                    repart = Repartition(partition_column=partition_col, max_retries=max_retries, log_interval=log_interval)
                     partition_results = repart.repartition(df, fp, data_access, output_path_base)
                     
                     # Add common fields to each result
@@ -459,7 +459,7 @@ class Pipeline:
             
             future = repartition_file.remote(
                 file_path, file_size, self.config.region, input_base_path,
-                repart_dict, repartition.partition_column, memory_gb, num_cpus, self.config.profile_name
+                repart_dict, repartition.partition_column, repartition.max_retries, repartition.log_interval, memory_gb, num_cpus, self.config.profile_name
             )
             return future
         

@@ -54,7 +54,7 @@ class Repartition:
         # Add TickerPrefix column (first letter of Ticker)
         df = df.with_columns(pl.col('Ticker').str.slice(0, 1).str.to_uppercase().alias('TickerPrefix'))
         
-        partition_keys = df.select(['TradeDate', 'ExchangeTicker', 'TickerPrefix', 'ISOExchangeCode', 'MIC', 'OPOL', 'ExecutionVenue']).unique().collect(streaming=True)
+        partition_keys = df.select(['TradeDate', 'TickerPrefix', 'ISOExchangeCode', 'MIC', 'OPOL', 'ExecutionVenue']).unique().collect(streaming=True)
         total_partitions = len(partition_keys)
         print(f"[REPARTITION] Found {total_partitions} unique partitions in {source_path}")
         
@@ -65,7 +65,6 @@ class Repartition:
             
             partition_df = df.filter(
                 (pl.col('TradeDate') == row['TradeDate']) &
-                (pl.col('ExchangeTicker') == row['ExchangeTicker']) &
                 (pl.col('TickerPrefix') == row['TickerPrefix']) &
                 (pl.col('ISOExchangeCode') == row['ISOExchangeCode']) &
                 (pl.col('MIC') == row['MIC']) &
@@ -118,7 +117,7 @@ class Repartition:
         # Add TickerPrefix column (first letter of Ticker)
         df = df.with_columns(pl.col('Ticker').str.slice(0, 1).str.to_uppercase().alias('TickerPrefix'))
         
-        partition_keys = df.select(['TradeDate', 'TickerPrefix', 'ISOExchangeCode', 'MIC', 'ExchangeTicker']).unique().collect(streaming=True)
+        partition_keys = df.select(['TradeDate', 'TickerPrefix', 'ISOExchangeCode', 'MIC']).unique().collect(streaming=True)
         total_partitions = len(partition_keys)
         print(f"[REPARTITION] Found {total_partitions} unique partitions in {source_path}")
         
@@ -131,8 +130,7 @@ class Repartition:
                 (pl.col('TradeDate') == row['TradeDate']) &
                 (pl.col('TickerPrefix') == row['TickerPrefix']) &
                 (pl.col('ISOExchangeCode') == row['ISOExchangeCode']) &
-                (pl.col('MIC') == row['MIC']) &
-                (pl.col('ExchangeTicker') == row['ExchangeTicker'])
+                (pl.col('MIC') == row['MIC'])
             )
             
             # Build partition path: TickerPrefix/ISOExchangeCode/MIC

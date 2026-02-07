@@ -2,6 +2,40 @@ import boto3
 import polars as pl
 from typing import Dict, Any, List, Tuple
 from .base import DataAccess
+import ray
+
+
+@ray.remote
+def _list_prefix_remote(region: str, profile_name: str, s3_path: str) -> List[Tuple[str, float]]:
+    """Ray remote function to list files in a single S3 prefix.
+    
+    Args:
+        region: AWS region
+        profile_name: AWS profile name
+        s3_path: Full S3 path (s3://bucket/prefix/)
+        
+    Returns:
+        List of (file_path, size_gb) tuples
+    """
+    if profile_name:
+        session = boto3.Session(profile_name=profile_name)
+    else:
+        session = boto3.Session()
+    s3_client = session.client('s3', region_name=region)
+    
+    # Parse s3://bucket/prefix
+    path_parts = s3_path[5:].split('/', 1)
+    bucket = path_parts[0]
+    prefix = path_parts[1] if len(path_parts) > 1 else ''
+    
+    files = []
+    paginator = s3_client.get_paginator('list_objects_v2')
+    for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+        if 'Contents' in page:
+            for obj in page['Contents']:
+                if not obj['Key'].endswith('/'):
+                    files.append((f"s3://{bucket}/{obj['Key']}", obj['Size'] / (1024 ** 3)))
+    return files
 
 class S3DataAccess(DataAccess):
     """S3 data access implementation using polars."""
@@ -64,30 +98,21 @@ class S3DataAccess(DataAccess):
         
         return files
     
-    def list_files_asynch(self, s3_path: str, parallel_discovery_threshold: int = 100) -> List[Tuple[str, float]]:
-        """List files with parallel discovery when threshold is reached.
+    def _discover_prefixes_sequential(self, bucket: str, base_prefix: str, parallel_discovery_threshold: int) -> List[str]:
+        """Discover prefixes sequentially until threshold is reached.
         
         Args:
-            s3_path: Base S3 path
-            parallel_discovery_threshold: Switch to parallel when prefix count exceeds this
-        
+            bucket: S3 bucket name
+            base_prefix: Base prefix to start discovery
+            parallel_discovery_threshold: Stop when prefix count exceeds this
+            
         Returns:
-            List of (file_path, size_gb) tuples
+            List of S3 prefixes (full s3:// paths) to process in parallel
         """
-        import asyncio
-        
-        if not s3_path.startswith('s3://'):
-            raise ValueError("Path must start with s3://")
-        
-        path_parts = s3_path[5:].split('/', 1)
-        bucket = path_parts[0]
-        base_prefix = path_parts[1].rstrip('/') + '/' if len(path_parts) > 1 else ''
-        
         s3_client = self._get_s3_client()
         
         print(f"Starting sequential directory discovery...")
         
-        # Discover prefixes until threshold is reached
         prefixes = [base_prefix]
         depth = 0
         while len(prefixes) < parallel_discovery_threshold:
@@ -99,32 +124,52 @@ class S3DataAccess(DataAccess):
                         new_prefixes.extend([cp['Prefix'] for cp in page['CommonPrefixes']])
             if not new_prefixes:
                 break
-            prefixes = new_prefixes
             depth += 1
+            print(f"Depth {depth}: found {len(new_prefixes)} directories")
+            if new_prefixes:
+                print(f"  Sample directories: {new_prefixes[:3]}")
+            if len(new_prefixes) >= parallel_discovery_threshold:
+                prefixes = new_prefixes
+                break
+            prefixes = new_prefixes
         
         print(f"Sequential discovery complete: found {len(prefixes)} directories at depth {depth}")
-        print(f"Starting parallel file listing...")
+        return [f"s3://{bucket}/{p}" for p in prefixes]
+    
+    def _list_files_parallel(self, prefixes: List[str]) -> List[Tuple[str, float]]:
+        """List files in parallel across multiple prefixes using Ray.
         
-        # List files in parallel
-        async def _list_prefix(prefix: str) -> List[Tuple[str, float]]:
-            loop = asyncio.get_event_loop()
-            def _list():
-                files = []
-                paginator = s3_client.get_paginator('list_objects_v2')
-                for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
-                    if 'Contents' in page:
-                        for obj in page['Contents']:
-                            if not obj['Key'].endswith('/'):
-                                files.append((f"s3://{bucket}/{obj['Key']}", obj['Size'] / (1024 ** 3)))
-                return files
-            return await loop.run_in_executor(None, _list)
+        Args:
+            prefixes: List of S3 prefixes (full s3:// paths) to process
+            
+        Returns:
+            List of (file_path, size_gb) tuples
+        """
+        print(f"Starting parallel file listing across {len(prefixes)} directories...")
         
-        async def _list_all():
-            tasks = [_list_prefix(prefix) for prefix in prefixes]
-            results = await asyncio.gather(*tasks)
-            return [file for sublist in results for file in sublist]
+        futures = [_list_prefix_remote.remote(self.region, self.profile_name, prefix) for prefix in prefixes]
+        results = ray.get(futures)
+        return [file for sublist in results for file in sublist]
+    
+    def list_files_asynch(self, s3_path: str, parallel_discovery_threshold: int = 100) -> List[Tuple[str, float]]:
+        """List files with parallel discovery when threshold is reached.
         
-        return asyncio.run(_list_all())
+        Args:
+            s3_path: Base S3 path
+            parallel_discovery_threshold: Switch to parallel when prefix count exceeds this
+        
+        Returns:
+            List of (file_path, size_gb) tuples
+        """
+        if not s3_path.startswith('s3://'):
+            raise ValueError("Path must start with s3://")
+        
+        path_parts = s3_path[5:].split('/', 1)
+        bucket = path_parts[0]
+        base_prefix = path_parts[1].rstrip('/') + '/' if len(path_parts) > 1 else ''
+        
+        prefixes = self._discover_prefixes_sequential(bucket, base_prefix, parallel_discovery_threshold)
+        return self._list_files_parallel(prefixes)
     
     def read(self, s3_path: str, **kwargs) -> pl.LazyFrame:
         """Read parquet from S3 path."""

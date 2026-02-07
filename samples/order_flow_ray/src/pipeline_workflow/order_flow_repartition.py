@@ -57,7 +57,7 @@ def main():
     
     # Run pipeline
     pipeline = Pipeline(config)
-    results = pipeline.run(specific_files=specific_files)
+    results = pipeline.run(files_slice=slice(50))
     
     # Display results
     print("\nRepartition Pipeline Results:")

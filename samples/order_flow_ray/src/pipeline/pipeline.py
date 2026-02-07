@@ -169,9 +169,13 @@ class Pipeline:
     
     def _repartition_step(self, files: list[tuple[str, int]]) -> Any:
         """Execute repartition step with retry logic."""
+        # Group files by size first
+        file_groups = self.data_access.group_files_by_size(files)
+        print(f"Grouped {len(files)} files into {len(file_groups)} groups for repartition")
+        
         return self._execute_step_with_retry(
             'repartition',
-            files,
+            file_groups,
             self.config.processing.repartition,
             self._run_repartition
         )
@@ -377,16 +381,12 @@ class Pipeline:
         
         return results
     
-    def _run_repartition(self, files: list[tuple[str, int]]) -> list[dict]:
-        """Run repartition for given files."""
+    def _run_repartition(self, file_groups: list[list[tuple[str, int]]]) -> list[dict]:
+        """Run repartition for given file groups."""
         repartition = self.config.processing.repartition
         repartitioned_loc = self.config.storage.repartitioned
         input_base_path = self.config.storage.get_step_input(repartition).get_path()
         memory_multiplier = self.config.ray.memory_multiplier
-        
-        # Group files by size
-        file_groups = self.data_access.group_files_by_size(files)
-        print(f"Grouped {len(files)} files into {len(file_groups)} groups")
         
         # Serialize repartitioned location once
         repart_dict = {

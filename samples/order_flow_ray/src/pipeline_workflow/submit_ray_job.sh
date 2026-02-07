@@ -8,12 +8,6 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 SRC_DIR="$(dirname "$SCRIPT_DIR")"
 
 # Default values
-RAY_ADDRESS="${RAY_ADDRESS}"
-if [ -z "$RAY_ADDRESS" ]; then
-  echo "Error: RAY_ADDRESS environment variable must be set"
-  echo "Example: export RAY_ADDRESS='http://your-cluster:8265'"
-  exit 1
-fi
 JOB_NAME="${JOB_NAME:-bmll-dataprep-$(date +%Y%m%d-%H%M%S)}"
 SPECIFIC_FILES="${2:-}"
 
@@ -29,7 +23,6 @@ fi
 PYTHON_SCRIPT="pipeline_workflow/$1"
 
 echo "Submitting Ray job: $JOB_NAME"
-echo "Ray address: $RAY_ADDRESS"
 echo "Working directory: $SRC_DIR"
 echo "Python script: $PYTHON_SCRIPT"
 if [ -n "$SPECIFIC_FILES" ]; then
@@ -41,13 +34,11 @@ fi
 # Submit the job
 if [ -n "$SPECIFIC_FILES" ]; then
   ray job submit \
-    --address="$RAY_ADDRESS" \
     --job-id="$JOB_NAME" \
     --working-dir="$SRC_DIR" \
     -- python "$PYTHON_SCRIPT" "$SPECIFIC_FILES"
 else
   ray job submit \
-    --address="$RAY_ADDRESS" \
     --job-id="$JOB_NAME" \
     --working-dir="$SRC_DIR" \
     -- python "$PYTHON_SCRIPT"

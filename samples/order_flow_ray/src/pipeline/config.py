@@ -4,6 +4,7 @@ from typing import Any
 from abc import ABC, abstractmethod
 from data_preprocessing.data_normalization import BMLLNormalizer
 from data_preprocessing.repartition import Repartition
+from data_preprocessing.reconciliation import Reconciliation
 from feature_engineering.order_flow import OrderFlowFeatureEngineering
 
 
@@ -83,6 +84,7 @@ class StorageConfig:
         raw_data: Input data location
         normalized: Normalized data location
         repartitioned: Repartitioned data location
+        reconciliation: Reconciliation reports location
         features: Feature data location
         models: Model storage location
         predictions: Predictions storage location
@@ -91,6 +93,7 @@ class StorageConfig:
     raw_data: StorageLocation
     normalized: StorageLocation
     repartitioned: StorageLocation
+    reconciliation: StorageLocation
     features: StorageLocation
     models: StorageLocation
     predictions: StorageLocation
@@ -102,6 +105,8 @@ class StorageConfig:
             return (self.raw_data, self.normalized)
         elif isinstance(step_instance, Repartition):
             return (self.normalized, self.repartitioned)
+        elif isinstance(step_instance, Reconciliation):
+            return (self.normalized, self.reconciliation)
         elif isinstance(step_instance, OrderFlowFeatureEngineering):
             return (self.repartitioned, self.features)
         else:
@@ -153,6 +158,7 @@ class ProcessingConfig:
     Args:
         normalization: Normalizer instance or None
         repartition: Repartition instance or None
+        reconciliation: Reconciliation instance or None
         feature_engineering: FeatureEngineer instance or None
         training: Trainer instance or None
         inference: Predictor instance or None
@@ -160,6 +166,7 @@ class ProcessingConfig:
     """
     normalization: Any | None = None
     repartition: Any | None = None
+    reconciliation: Any | None = None
     feature_engineering: Any | None = None
     training: Any | None = None
     inference: Any | None = None

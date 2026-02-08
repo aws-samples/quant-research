@@ -23,7 +23,7 @@ class Pipeline:
     def _get_active_steps(self) -> list[tuple[str, Any]]:
         """Return list of (step_name, step_instance) for configured steps."""
         steps = []
-        for step_name in ['normalization', 'repartition', 'feature_engineering', 'training', 'inference', 'backtest']:
+        for step_name in ['normalization', 'repartition', 'reconciliation', 'feature_engineering', 'training', 'inference', 'backtest']:
             step = getattr(self.config.processing, step_name, None)
             if step is not None:
                 steps.append((step_name, step))
@@ -111,6 +111,10 @@ class Pipeline:
                 print("Running repartition...")
                 data = self._repartition_step(data)
             
+            if self.config.processing.reconciliation:
+                print("Running reconciliation...")
+                data = self._reconciliation_step(data)
+            
             if self.config.processing.feature_engineering:
                 print("Running feature engineering...")
                 data = self._feature_engineering_step(data)
@@ -179,6 +183,28 @@ class Pipeline:
             self.config.processing.repartition,
             self._run_repartition
         )
+    
+    def _reconciliation_step(self, data: Any) -> Any:
+        """Execute reconciliation step."""
+        reconciliation = self.config.processing.reconciliation
+        
+        # Discover date/type combinations
+        normalized_path = self.config.storage.normalized.get_path()
+        date_type_pairs = reconciliation.discover_files(
+            self.data_access,
+            normalized_path,
+            self.config.ray.file_sort_order
+        )
+        
+        print(f"Discovered {len(date_type_pairs)} date/type combinations for reconciliation")
+        
+        # Run reconciliation
+        results = self._run_reconciliation(date_type_pairs)
+        
+        # Aggregate mismatches and write to S3
+        self._write_reconciliation_report(results)
+        
+        return results
     
     def _execute_step_with_retry(self, step_name: str, data: Any, step_instance: Any, execute_func) -> Any:
         """Generic retry wrapper for pipeline steps.
@@ -712,6 +738,79 @@ class Pipeline:
         # TODO: Implement backtest
         print("Backtest not yet implemented")
         return data
+    
+    def _run_reconciliation(self, date_type_pairs: list[tuple[str, str]]) -> list[dict]:
+        """Run reconciliation for given date/type pairs."""
+        reconciliation = self.config.processing.reconciliation
+        normalized_path = self.config.storage.normalized.get_path()
+        repartitioned_path = self.config.storage.repartitioned.get_path()
+        
+        @ray.remote(num_cpus=1, max_retries=0)
+        def reconcile_date_type(date: str, data_type: str, region: str, norm_path: str, repart_path: str, profile: str) -> dict:
+            try:
+                from data_preprocessing.data_access.factory import DataAccessFactory
+                from data_preprocessing.reconciliation import Reconciliation
+                
+                data_access = DataAccessFactory.create('s3', region=region, profile_name=profile)
+                recon = Reconciliation()
+                result = recon.reconcile(date, data_type, data_access, norm_path, repart_path)
+                return result
+            except Exception as e:
+                return {
+                    'date': date,
+                    'data_type': data_type,
+                    'total_groups': 0,
+                    'matched_groups': 0,
+                    'mismatched_groups': 0,
+                    'mismatches': None,
+                    'message': str(e)
+                }
+        
+        futures = [
+            reconcile_date_type.remote(date, data_type, self.config.region, normalized_path, repartitioned_path, self.config.profile_name)
+            for date, data_type in date_type_pairs
+        ]
+        results = ray.get(futures)
+        
+        return results
+    
+    def _write_reconciliation_report(self, results: list[dict]):
+        """Write reconciliation report to S3."""
+        from datetime import datetime
+        import polars as pl
+        
+        # Generate timestamp for filename
+        run_timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        # Collect all mismatches
+        all_mismatches = []
+        total_matched = 0
+        total_mismatched = 0
+        
+        for result in results:
+            if result.get('message') == 'success':
+                total_matched += result['matched_groups']
+                total_mismatched += result['mismatched_groups']
+                
+                if result['mismatched_groups'] > 0 and result['mismatches'] is not None:
+                    all_mismatches.append(result['mismatches'])
+        
+        print(f"\n[RECONCILIATION] Summary:")
+        print(f"  Total matched groups: {total_matched:,}")
+        print(f"  Total mismatched groups: {total_mismatched:,}")
+        
+        # Write report if there are mismatches
+        if all_mismatches:
+            combined_mismatches = pl.concat(all_mismatches)
+            
+            reconciliation_path = self.config.storage.reconciliation.get_path()
+            output_path = f"{reconciliation_path.rstrip('/')}/norm_to_repartition_recon_{run_timestamp}.csv"
+            
+            # Write to S3
+            self.data_access.write_csv(combined_mismatches, output_path)
+            print(f"  Reconciliation report written to: {output_path}")
+        else:
+            print(f"  No mismatches found - no report generated")
     
     def shutdown(self):
         """Shutdown Ray."""

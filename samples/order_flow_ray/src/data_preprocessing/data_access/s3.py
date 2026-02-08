@@ -181,6 +181,15 @@ class S3DataAccess(DataAccess):
         storage_options = self._get_storage_options()
         data.sink_parquet(s3_path, storage_options=storage_options, **kwargs)
     
+    def write_csv(self, data: pl.DataFrame, s3_path: str) -> None:
+        """Write CSV to S3 path."""
+        storage_options = self._get_storage_options()
+        data.write_csv(s3_path, storage_options=storage_options)
+    
+    def get_storage_options(self) -> Dict[str, str]:
+        """Get storage options for external use."""
+        return self._get_storage_options()
+    
     def group_files_by_size(self, files: List[Tuple[str, int]]) -> List[List[Tuple[str, int]]]:
         """Group files into subarrays where each subarray has total size approximately equal to max file size.
         

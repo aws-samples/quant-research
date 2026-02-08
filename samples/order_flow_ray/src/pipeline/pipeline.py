@@ -78,13 +78,16 @@ class Pipeline:
         else:
             self.normalized_access = self.data_access
     
-    def run(self, files_slice=slice(None), specific_files: list[str] | None = None):
+    def run(self, files_slice=slice(None), specific_files: list[str] | None = None, specific_date_types: list[tuple[str, str]] | None = None):
         """Execute pipeline steps based on configuration.
         
         Args:
             files_slice: Python slice object for file selection (default: slice(None) = all files)
                         Examples: slice(1000), slice(1000, None), slice(1500, 2300)
-            specific_files: Optional list of specific file paths to process
+                        For reconciliation: applies to date/type pairs
+            specific_files: Optional list of specific file paths to process (for normalization/repartition)
+            specific_date_types: Optional list of (date, data_type) tuples for reconciliation
+                                Examples: [('2024-12-31', 'trades'), ('2024-12-31', 'level2q')]
         """
         self.initialize()
         try:
@@ -113,7 +116,13 @@ class Pipeline:
             
             if self.config.processing.reconciliation:
                 print("Running reconciliation...")
-                data = self._reconciliation_step(data)
+                # Pass filtering info to reconciliation step
+                recon_data = {'reconciliation_filter': {}}
+                if specific_date_types:
+                    recon_data['reconciliation_filter']['specific_pairs'] = specific_date_types
+                elif files_slice != slice(None):
+                    recon_data['reconciliation_filter']['slice'] = files_slice
+                data = self._reconciliation_step(recon_data)
             
             if self.config.processing.feature_engineering:
                 print("Running feature engineering...")
@@ -197,6 +206,17 @@ class Pipeline:
         )
         
         print(f"Discovered {len(date_type_pairs)} date/type combinations for reconciliation")
+        
+        # Apply filtering from pipeline.run() if data contains slice/specific info
+        if isinstance(data, dict) and 'reconciliation_filter' in data:
+            filter_info = data['reconciliation_filter']
+            if 'specific_pairs' in filter_info:
+                specific_set = set(filter_info['specific_pairs'])
+                date_type_pairs = [pair for pair in date_type_pairs if pair in specific_set]
+                print(f"Filtered to {len(date_type_pairs)} specific date/type combinations")
+            elif 'slice' in filter_info:
+                date_type_pairs = date_type_pairs[filter_info['slice']]
+                print(f"Sliced to {len(date_type_pairs)} date/type combinations")
         
         # Run reconciliation
         results = self._run_reconciliation(date_type_pairs)

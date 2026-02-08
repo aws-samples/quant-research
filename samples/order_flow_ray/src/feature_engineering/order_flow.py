@@ -8,7 +8,7 @@ from .base import TimeBarFeatureEngineering
 class FeatureEngineering(ABC):
     """Base class for feature engineering with configurable bar aggregation."""
     
-    def __init__(self, bar_duration_ms: int = 1000, max_retries: int = 3, discovery_mode: str = 'asynch'):
+    def __init__(self, bar_duration_ms: int = 1000, max_retries: int = 3, discovery_mode: str = 'synch'):
         """Feature engineering initialization.
         
         Args:

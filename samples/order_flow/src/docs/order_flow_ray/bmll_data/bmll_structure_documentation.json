@@ -390,7 +390,16 @@
     "trade_features": {
       "description": "Aggregated trade features from TradeFeatureEngineering",
       "total_columns": 40,
-      "grouping_keys": ["bar_id", "TradeDate", "ExchangeTicker", "Ticker", "ISOExchangeCode", "MIC", "OPOL", "ExecutionVenue"],
+      "grouping_keys": [
+        "bar_id",
+        "TradeDate",
+        "ExchangeTicker",
+        "Ticker",
+        "ISOExchangeCode",
+        "MIC",
+        "OPOL",
+        "ExecutionVenue"
+      ],
       "complete_schema": {
         "bar_id": "Int64",
         "TradeDate": "Date",
@@ -435,19 +444,111 @@
         "unassigned_count_ratio": "Float64"
       },
       "feature_categories": {
-        "bar_metadata": ["bar_id", "bar_id_dt", "bar_duration_ms"],
-        "timestamp_features": ["bar_start_ns", "bar_end_ns", "trade_count", "trade_timestamp_min", "trade_timestamp_max", "publication_timestamp_min", "publication_timestamp_max", "local_trade_timestamp_min", "local_trade_timestamp_max", "local_publication_timestamp_min", "local_publication_timestamp_max"],
-        "price_features": ["price_open", "price_high", "price_low", "price_close", "price_mean"],
-        "volume_features": ["volume", "avg_trade_size", "max_trade_size"],
-        "vwap_features": ["price_volume_sum", "vwap"],
-        "imbalance_features": ["volume_imbalance", "trade_imbalance", "unassigned_volume", "unassigned_count", "total_volume", "total_trades"],
-        "ratio_features": ["volume_imbalance_ratio", "trade_imbalance_ratio", "unassigned_volume_ratio", "unassigned_count_ratio"]
+        "bar_metadata": [
+          "bar_id",
+          "bar_id_dt",
+          "bar_duration_ms"
+        ],
+        "timestamp_features": [
+          "bar_start_ns",
+          "bar_end_ns",
+          "trade_count",
+          "trade_timestamp_min",
+          "trade_timestamp_max",
+          "publication_timestamp_min",
+          "publication_timestamp_max",
+          "local_trade_timestamp_min",
+          "local_trade_timestamp_max",
+          "local_publication_timestamp_min",
+          "local_publication_timestamp_max"
+        ],
+        "price_features": [
+          "price_open",
+          "price_high",
+          "price_low",
+          "price_close",
+          "price_mean"
+        ],
+        "volume_features": [
+          "volume",
+          "avg_trade_size",
+          "max_trade_size"
+        ],
+        "vwap_features": [
+          "price_volume_sum",
+          "vwap"
+        ],
+        "imbalance_features": [
+          "volume_imbalance",
+          "trade_imbalance",
+          "unassigned_volume",
+          "unassigned_count",
+          "total_volume",
+          "total_trades"
+        ],
+        "ratio_features": [
+          "volume_imbalance_ratio",
+          "trade_imbalance_ratio",
+          "unassigned_volume_ratio",
+          "unassigned_count_ratio"
+        ]
       },
       "aggressor_side_mapping": {
         "1": "Buy (buyer initiated)",
-        "2": "Sell (seller initiated)", 
+        "2": "Sell (seller initiated)",
         "0": "Unassigned (no clear aggressor)"
       }
+    }
+  },
+  "repartitioned_v2_structure": {
+    "documentation_info": {
+      "date": "2026/02/08",
+      "timestamp": "2026-02-08T13:58:06.120458",
+      "base_path": "s3://orderflowanalysis/intermediate/repartitioned_v2/",
+      "description": "Repartitioned data organized by ticker first letter and exchange"
+    },
+    "directory_structure": {
+      "pattern": "YYYY/MM/DD/{data_type}/AMERICAS/{ticker_first_letter}/{exchange}/{files}",
+      "levels": {
+        "1": "Years (2023, 2024)",
+        "2": "Months (01-12)",
+        "3": "Days (trading days only)",
+        "4": "Data types (level2q, trades)",
+        "5": "Region (AMERICAS)",
+        "6": "Ticker first letter (A-Z)",
+        "7": "Exchange (ASE, BATS, BATY, BOS, CHI, CIS, EDGA, EDGX, EPRL, IEXG, MEMX, NAS, NYS, PHL, PSE)",
+        "8": "Parquet files"
+      }
+    },
+    "partitioning_strategy": {
+      "primary": "Ticker first letter (A-Z)",
+      "secondary": "Exchange",
+      "benefits": "Enables efficient filtering by ticker patterns and exchange-specific processing"
+    },
+    "exchanges_found": [
+      "ASE",
+      "BATS",
+      "BATY",
+      "BOS",
+      "CHI",
+      "CIS",
+      "EDGA",
+      "EDGX",
+      "EPRL",
+      "IEXG",
+      "MEMX",
+      "NAS",
+      "NYS",
+      "PHL",
+      "PSE"
+    ],
+    "exchanges_note": "Sample from 2023/01/03 - actual exchanges vary by date and data availability",
+    "sample_exploration": {
+      "path": "2023/01/03/level2q/AMERICAS/A/BATS",
+      "files_found": 1,
+      "sample_files": [
+        "BATS/BATS-20230103.parquet"
+      ]
     }
   }
 }

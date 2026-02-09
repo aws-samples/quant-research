@@ -100,8 +100,12 @@ class Pipeline:
                 filtered_files = [(path, size) for path, size in discovered_files if path in specific_set]
                 print(f"Processing {len(filtered_files)} specific files (filtered from discovered)")
             else:
-                filtered_files = discovered_files[files_slice]  # Apply slice directly
-                print(f"Processing files[{files_slice}]: {len(filtered_files)} files")
+                if files_slice is not None:
+                    filtered_files = discovered_files[files_slice]  # Apply slice directly
+                    print(f"Processing files[{files_slice}]: {len(filtered_files)} files")
+                else:
+                    filtered_files = discovered_files  # Use all files
+                    print(f"Processing all discovered files: {len(filtered_files)} files")
             
             # Execute enabled steps
             data = filtered_files

@@ -501,7 +501,7 @@ class Pipeline:
         """Run feature engineering for grouped files."""
         feature_engineering = self.config.processing.feature_engineering
         features_loc = self.config.storage.features
-        feature_engineering_base_path = self.config.storage.normalized.get_path()
+        feature_engineering_base_path = self.config.storage.get_step_input(self.config.processing.feature_engineering).get_path()
         memory_multiplier = self.config.ray.memory_multiplier
         
         # Serialize features location once

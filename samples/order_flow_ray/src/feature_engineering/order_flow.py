@@ -8,7 +8,7 @@ from .base import TimeBarFeatureEngineering
 class FeatureEngineering(ABC):
     """Base class for feature engineering with configurable bar aggregation."""
     
-    def __init__(self, bar_duration_ms: int = 1000, max_retries: int = 3, discovery_mode: str = 'synch'):
+    def __init__(self, bar_duration_ms: int = 1000, max_retries: int = 3):
         """Feature engineering initialization.
         
         Args:
@@ -53,7 +53,7 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
             trade_eng = TradeFeatureEngineering(self.bar_duration_ms, self.max_retries)
             return trade_eng.feature_computation(data)
     
-    def discover_files(self, data_access, normalized_data_path: str, sort_order: str) -> list[tuple[str, int]]:
+    def discover_files(self, data_access, normalized_data_path: str, sort_order: str, discovery_mode: str) -> list[tuple[str, int]]:
         """Discover normalized files to process.
         
         Args:
@@ -64,7 +64,7 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
         Returns:
             List of (file_path, file_size) tuples sorted by size
         """
-        if self.discovery_mode == 'asynch':
+        if discovery_mode == 'asynch':
             return self.discover_files_asynch(data_access, normalized_data_path, sort_order)
         
         print(f"Discovering files in: {normalized_data_path}")

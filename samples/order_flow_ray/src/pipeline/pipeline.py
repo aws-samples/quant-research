@@ -99,7 +99,8 @@ class Pipeline:
                 discovered_data = reconciliation.discover_files(
                     self.data_access,
                     normalized_path,
-                    self.config.ray.file_sort_order
+                    self.config.ray.file_sort_order,
+                    'synch'
                 )
                 print(f"Discovered {len(discovered_data)} date/type combinations for reconciliation")
             else:
@@ -179,10 +180,16 @@ class Pipeline:
         input_location = self.config.storage.get_step_input(first_step)
         
         # Discover files using the first step
+        if first_step_name == 'feature_engineering':
+            discovery_mode = 'asynch'
+        else:
+            discovery_mode = 'synch'
+            
         return first_step.discover_files(
             self.data_access, 
             input_location.get_path(), 
-            self.config.ray.file_sort_order
+            self.config.ray.file_sort_order,
+            discovery_mode
         )
     
     def _normalize_step(self, files: list[tuple[str, int]]) -> Any:

@@ -14,11 +14,9 @@ class FeatureEngineering(ABC):
         Args:
             bar_duration_ms: Bar duration in milliseconds
             max_retries: Maximum retry attempts
-            discovery_mode: 'synch' or 'asynch' for file discovery
         """
         self.bar_duration_ms = bar_duration_ms
         self.max_retries = max_retries
-        self.discovery_mode = discovery_mode
     
     @abstractmethod
     def feature_computation(self, data: pl.LazyFrame) -> pl.LazyFrame:

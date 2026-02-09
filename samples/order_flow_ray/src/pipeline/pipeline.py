@@ -499,9 +499,9 @@ class Pipeline:
     
     def _run_feature_engineering(self, file_groups: List[List[tuple[str, int]]]) -> list[dict]:
         """Run feature engineering for grouped files."""
-        feature_engineering = self.config.processing.feature_engineering
+        feature_engineering_processor = self.config.processing.feature_engineering
         features_loc = self.config.storage.features
-        feature_engineering_base_path = self.config.storage.get_step_input(self.config.processing.feature_engineering).get_path()
+        feature_engineering_base_path = self.config.storage.get_step_input(feature_engineering_processor).get_path()
         memory_multiplier = self.config.ray.memory_multiplier
         
         # Serialize features location once
@@ -588,7 +588,7 @@ class Pipeline:
                             'row_count': row_count,
                             'output_size_mb': output_size_mb,
                             'data_type': data_type,
-                            'stage': str(feature_engineering),
+                            'stage': str(feature_engineering_processor),
                             'message': 'success'
                         })
                         
@@ -603,7 +603,7 @@ class Pipeline:
                             'row_count': None,
                             'output_size_mb': 0,
                             'data_type': data_type if 'data_type' in locals() else 'unknown',
-                            'stage': str(feature_engineering),
+                            'stage': str(feature_engineering_processor),
                             'message': str(e)
                         })
                 
@@ -612,11 +612,11 @@ class Pipeline:
             print(f"[FE] Submitting task for file group with {len(file_group)} files")
             print(f"[FE] First item type: {type(file_group[0])}, value: {file_group[0]}")
             feature_engineering_group_remote = ray.remote(num_cpus=num_cpus, max_retries=0)(feature_engineering_group)
-            print(f"[FE] file_group={file_group}, region={self.config.region}, fe_base={feature_engineering_base_path}, features_dict={features_dict}, mem_gb={memory_gb}, cpus={num_cpus}, profile={self.config.profile_name}, bar_duration_ms={self.config.processing.feature_engineering.bar_duration_ms}")
+            print(f"[FE] file_group={file_group}, region={self.config.region}, fe_base={feature_engineering_base_path}, features_dict={features_dict}, mem_gb={memory_gb}, cpus={num_cpus}, profile={self.config.profile_name}, bar_duration_ms={feature_engineering_processor.bar_duration_ms}")
             future = feature_engineering_group_remote.remote(
                 file_group, self.config.region, feature_engineering_base_path,
                 features_dict, memory_gb, num_cpus, self.config.profile_name,
-                self.config.processing.feature_engineering.bar_duration_ms
+                feature_engineering_processor.bar_duration_ms
             )
             return future
         

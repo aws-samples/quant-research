@@ -91,57 +91,45 @@ class Pipeline:
         """
         self.initialize()
         try:
-            # Discover data based on active steps
-            if self.config.processing.reconciliation:
-                # Reconciliation uses date/type pairs instead of files
-                reconciliation = self.config.processing.reconciliation
-                normalized_path = self.config.storage.normalized.get_path()
-                discovered_data = reconciliation.discover_files(
-                    self.data_access,
-                    normalized_path,
-                    self.config.ray.file_sort_order,
-                    'synch'
-                )
-                print(f"Discovered {len(discovered_data)} date/type combinations for reconciliation")
-            else:
-                # Other steps use file discovery
-                discovered_data = self._discover_files()
-                print(f"Discovered {len(discovered_data)} files")
-            
-            # Apply filtering once for all steps
-            if specific_files:
-                specific_set = set(specific_files)
-                filtered_data = [(path, size) for path, size in discovered_data if path in specific_set]
-                print(f"Processing {len(filtered_data)} specific files (filtered from discovered)")
-            elif specific_date_types:
-                specific_set = set(specific_date_types)
-                filtered_data = [pair for pair in discovered_data if pair in specific_set]
-                print(f"Processing {len(filtered_data)} specific date/type combinations")
-            elif files_slice is not None:
-                filtered_data = discovered_data[files_slice]
-                print(f"Processing data[{files_slice}]: {len(filtered_data)} items")
-            else:
-                filtered_data = discovered_data
-                print(f"Processing all discovered data: {len(filtered_data)} items")
-            
-            # Execute enabled steps
-            data = filtered_data
+            data = None
             
             if self.config.processing.normalization:
                 print("Running normalization...")
-                data = self._normalize_step(data)
+                input_path = self.config.storage.get_step_input(self.config.processing.normalization).get_path()
+                discovered_files = self.config.processing.normalization.discover_files(
+                    self.data_access, input_path, self.config.ray.file_sort_order
+                )
+                filtered_files = self._apply_filtering(discovered_files, files_slice, specific_files)
+                data = self._normalize_step(filtered_files)
             
             if self.config.processing.repartition:
                 print("Running repartition...")
-                data = self._repartition_step(data)
+                input_path = self.config.storage.get_step_input(self.config.processing.repartition).get_path()
+                discovered_files = self.config.processing.repartition.discover_files(
+                    self.data_access, input_path, self.config.ray.file_sort_order
+                )
+                filtered_files = self._apply_filtering(discovered_files, files_slice, specific_files)
+                file_groups = self.data_access.group_files_by_size(filtered_files)
+                data = self._repartition_step(file_groups)
             
             if self.config.processing.reconciliation:
                 print("Running reconciliation...")
-                data = self._reconciliation_step(data)
+                input_path = self.config.storage.get_step_input(self.config.processing.reconciliation).get_path()
+                discovered_pairs = self.config.processing.reconciliation.discover_files(
+                    self.data_access, input_path, self.config.ray.file_sort_order
+                )
+                filtered_pairs = self._apply_filtering(discovered_pairs, files_slice, specific_date_types)
+                data = self._reconciliation_step(filtered_pairs)
             
             if self.config.processing.feature_engineering:
                 print("Running feature engineering...")
-                data = self._feature_engineering_step(data)
+                input_path = self.config.storage.get_step_input(self.config.processing.feature_engineering).get_path()
+                discovered_files = self.config.processing.feature_engineering.discover_files(
+                    self.data_access, input_path, self.config.ray.file_sort_order, 'asynch'
+                )
+                filtered_files = self._apply_filtering(discovered_files, files_slice, specific_files)
+                grouped_files = self.config.processing.feature_engineering.group_files_for_processing(filtered_files)
+                data = self._feature_engineering_step(grouped_files)
             
             if self.config.processing.training:
                 print("Running training...")
@@ -162,35 +150,17 @@ class Pipeline:
         finally:
             self.shutdown()
     
-    def _discover_files(self) -> list[tuple[str, int]]:
-        """Discover files based on first active step."""
-        if not self.data_access:
-            self.initialize()
-        
-        # Get active steps in order
-        active_steps = self._get_active_steps()
-        
-        if not active_steps:
-            raise ValueError("No processing steps configured")
-        
-        # Use the first step to discover files
-        first_step_name, first_step = active_steps[0]
-        
-        # Get input path for first step
-        input_location = self.config.storage.get_step_input(first_step)
-        
-        # Discover files using the first step
-        if first_step_name == 'feature_engineering':
-            discovery_mode = 'asynch'
+    def _apply_filtering(self, discovered_data, files_slice, specific_items):
+        """Apply filtering logic to discovered data."""
+        if specific_items:
+            specific_set = set(specific_items)
+            return [item for item in discovered_data if item[0] in specific_set or item in specific_set]
+        elif files_slice is not None:
+            return discovered_data[files_slice]
         else:
-            discovery_mode = 'synch'
-            
-        return first_step.discover_files(
-            self.data_access, 
-            input_location.get_path(), 
-            self.config.ray.file_sort_order,
-            discovery_mode
-        )
+            return discovered_data
+    
+
     
     def _normalize_step(self, files: list[tuple[str, int]]) -> Any:
         """Execute normalization step with retry logic."""

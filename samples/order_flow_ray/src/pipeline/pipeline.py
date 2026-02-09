@@ -612,7 +612,7 @@ class Pipeline:
             print(f"[FE] Submitting task for file group with {len(file_group)} files")
             print(f"[FE] First item type: {type(file_group[0])}, value: {file_group[0]}")
             feature_engineering_group_remote = ray.remote(num_cpus=num_cpus, max_retries=0)(feature_engineering_group)
-            print(f"[FE] Calling remote with: file_group={len(file_group)} files, region={self.config.region}, fe_base={feature_engineering_base_path}, features_dict={features_dict['access_type']}, mem_gb={memory_gb}, cpus={num_cpus}, profile={self.config.profile_name}, bar_duration_ms={self.config.processing.feature_engineering.bar_duration_ms}")
+            print(f"[FE] file_group={file_group}, region={self.config.region}, fe_base={feature_engineering_base_path}, features_dict={features_dict}, mem_gb={memory_gb}, cpus={num_cpus}, profile={self.config.profile_name}, bar_duration_ms={self.config.processing.feature_engineering.bar_duration_ms}")
             future = feature_engineering_group_remote.remote(
                 file_group, self.config.region, feature_engineering_base_path,
                 features_dict, memory_gb, num_cpus, self.config.profile_name,

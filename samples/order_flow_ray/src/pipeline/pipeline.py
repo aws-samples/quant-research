@@ -91,24 +91,40 @@ class Pipeline:
         """
         self.initialize()
         try:
-            # Always discover files first
-            discovered_files = self._discover_files()
+            # Discover data based on active steps
+            if self.config.processing.reconciliation:
+                # Reconciliation uses date/type pairs instead of files
+                reconciliation = self.config.processing.reconciliation
+                normalized_path = self.config.storage.normalized.get_path()
+                discovered_data = reconciliation.discover_files(
+                    self.data_access,
+                    normalized_path,
+                    self.config.ray.file_sort_order
+                )
+                print(f"Discovered {len(discovered_data)} date/type combinations for reconciliation")
+            else:
+                # Other steps use file discovery
+                discovered_data = self._discover_files()
+                print(f"Discovered {len(discovered_data)} files")
             
-            # Filter by specific files if provided
+            # Apply filtering once for all steps
             if specific_files:
                 specific_set = set(specific_files)
-                filtered_files = [(path, size) for path, size in discovered_files if path in specific_set]
-                print(f"Processing {len(filtered_files)} specific files (filtered from discovered)")
+                filtered_data = [(path, size) for path, size in discovered_data if path in specific_set]
+                print(f"Processing {len(filtered_data)} specific files (filtered from discovered)")
+            elif specific_date_types:
+                specific_set = set(specific_date_types)
+                filtered_data = [pair for pair in discovered_data if pair in specific_set]
+                print(f"Processing {len(filtered_data)} specific date/type combinations")
+            elif files_slice is not None:
+                filtered_data = discovered_data[files_slice]
+                print(f"Processing data[{files_slice}]: {len(filtered_data)} items")
             else:
-                if files_slice is not None:
-                    filtered_files = discovered_files[files_slice]  # Apply slice directly
-                    print(f"Processing files[{files_slice}]: {len(filtered_files)} files")
-                else:
-                    filtered_files = discovered_files  # Use all files
-                    print(f"Processing all discovered files: {len(filtered_files)} files")
+                filtered_data = discovered_data
+                print(f"Processing all discovered data: {len(filtered_data)} items")
             
             # Execute enabled steps
-            data = filtered_files
+            data = filtered_data
             
             if self.config.processing.normalization:
                 print("Running normalization...")
@@ -120,13 +136,7 @@ class Pipeline:
             
             if self.config.processing.reconciliation:
                 print("Running reconciliation...")
-                # Pass filtering info to reconciliation step
-                recon_data = {'reconciliation_filter': {}}
-                if specific_date_types:
-                    recon_data['reconciliation_filter']['specific_pairs'] = specific_date_types
-                elif files_slice != slice(None):
-                    recon_data['reconciliation_filter']['slice'] = files_slice
-                data = self._reconciliation_step(recon_data)
+                data = self._reconciliation_step(data)
             
             if self.config.processing.feature_engineering:
                 print("Running feature engineering...")
@@ -197,32 +207,9 @@ class Pipeline:
             self._run_repartition
         )
     
-    def _reconciliation_step(self, data: Any) -> Any:
+    def _reconciliation_step(self, date_type_pairs: list[tuple[str, str]]) -> Any:
         """Execute reconciliation step."""
-        reconciliation = self.config.processing.reconciliation
-        
-        # Discover date/type combinations
-        normalized_path = self.config.storage.normalized.get_path()
-        date_type_pairs = reconciliation.discover_files(
-            self.data_access,
-            normalized_path,
-            self.config.ray.file_sort_order
-        )
-        
-        print(f"Discovered {len(date_type_pairs)} date/type combinations for reconciliation")
-        
-        # Apply filtering from pipeline.run() if data contains slice/specific info
-        if isinstance(data, dict) and 'reconciliation_filter' in data:
-            filter_info = data['reconciliation_filter']
-            if 'specific_pairs' in filter_info:
-                specific_set = set(filter_info['specific_pairs'])
-                date_type_pairs = [pair for pair in date_type_pairs if pair in specific_set]
-                print(f"Filtered to {len(date_type_pairs)} specific date/type combinations")
-            elif 'slice' in filter_info:
-                date_type_pairs = date_type_pairs[filter_info['slice']]
-                print(f"Sliced to {len(date_type_pairs)} date/type combinations")
-        
-        # Run reconciliation
+        # Run reconciliation with pre-filtered date/type pairs
         results = self._run_reconciliation(date_type_pairs)
         
         # Aggregate mismatches and write to S3

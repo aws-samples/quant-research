@@ -610,6 +610,7 @@ class Pipeline:
                 return results
             
             print(f"[FE_1] Submitting task for file group with {len(file_group)} files")
+            print(f"[FE_1] First item type: {type(file_group[0])}, value: {file_group[0]}")
             feature_engineering_group_remote = ray.remote(num_cpus=num_cpus, max_retries=0)(feature_engineering_group)
             print(f"[FE_2] Submitting task for file group with {len(file_group)} files")
             future = feature_engineering_group_remote.remote(

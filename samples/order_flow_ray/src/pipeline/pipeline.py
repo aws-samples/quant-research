@@ -530,36 +530,14 @@ class Pipeline:
             def feature_engineering_group(file_group: List[tuple[str, int]], region: str, fe_base: str, features_loc_dict: dict, mem_gb: float, cpus: int, profile: str, bar_duration_ms: int) -> List[dict]:
                 results = []
                 
-                print(f"[FE Remote] Starting group with {len(file_group)} files")
-                print(f"[FE Remote] File group structure: {type(file_group)}, first item: {file_group[0] if file_group else 'empty'}")
-                
-                for i, file_item in enumerate(file_group):
-                    print(f"[FE Remote] Processing item {i}: {type(file_item)}, value: {file_item}")
-                    try:
-                        file_path, file_size = file_item
-                        print(f"[FE Remote] Unpacked successfully: path={file_path}, size={file_size}")
-                    except Exception as unpack_error:
-                        print(f"[FE Remote] UNPACK ERROR on item {i}: {unpack_error}")
-                        print(f"[FE Remote] Item details: type={type(file_item)}, len={len(file_item) if hasattr(file_item, '__len__') else 'no len'}, value={file_item}")
-                        raise
-                    try:
-                        file_path, file_size = file_item
-                        print(f"[FE Remote] Unpacked successfully: path={file_path}, size={file_size}")
-                    except Exception as unpack_error:
-                        print(f"[FE Remote] UNPACK ERROR on item {i}: {unpack_error}")
-                        print(f"[FE Remote] Item details: type={type(file_item)}, len={len(file_item) if hasattr(file_item, '__len__') else 'no len'}, value={file_item}")
-                        raise
-                    
+                for file_path, file_size in file_group:
                     try:
                         import polars as pl
                         from data_preprocessing.data_access.factory import DataAccessFactory
                         from feature_engineering.order_flow import OrderFlowFeatureEngineering
                         
-                        print(f"[FE Remote] Starting processing for {file_path}")
-                        
                         # Extract data_type from path
                         data_type = 'level2q' if 'level2q' in file_path else 'trades'
-                        print(f"[FE Remote] Detected data_type: {data_type}")
                         
                         # Read from normalized
                         data_access = DataAccessFactory.create('s3', region=region, profile_name=profile)

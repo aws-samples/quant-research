@@ -110,20 +110,9 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
         """
         from collections import defaultdict
         
-        print(f"[FE Group] Input files type: {type(files)}, length: {len(files)}")
-        print(f"[FE Group] First 3 items: {files[:3] if files else 'empty'}")
-        
         groups = defaultdict(list)
         
-        for i, file_item in enumerate(files):
-            print(f"[FE Group] Processing item {i}: type={type(file_item)}, value={file_item}")
-            try:
-                file_path, file_size = file_item
-                print(f"[FE Group] Unpacked successfully: path={file_path}, size={file_size}")
-            except Exception as unpack_error:
-                print(f"[FE Group] UNPACK ERROR on item {i}: {unpack_error}")
-                print(f"[FE Group] Item details: type={type(file_item)}, len={len(file_item) if hasattr(file_item, '__len__') else 'no len'}, value={file_item}")
-                raise
+        for file_path, file_size in files:
             # Extract exchange from filename
             # Expected format: trades-XASE-20240604.parquet or XASE-20240604.parquet
             filename = file_path.split('/')[-1]

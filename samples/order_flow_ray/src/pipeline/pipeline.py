@@ -526,7 +526,7 @@ class Pipeline:
                 memory_gb = memory_bytes / (1024 ** 3)
                 num_cpus = ceil(memory_gb / self.config.ray.memory_per_core_gb) + self.config.ray.cpu_buffer
             
-            @ray.remote(num_cpus=num_cpus, max_retries=0)
+            #@ray.remote(num_cpus=num_cpus, max_retries=0)
             def feature_engineering_group(file_group: List[tuple[str, int]], region: str, fe_base: str, features_loc_dict: dict, mem_gb: float, cpus: int, profile: str, bar_duration_ms: int) -> List[dict]:
                 results = []
                 

@@ -285,20 +285,20 @@ class Pipeline:
     
     def _run_normalization(self, files: list[tuple[str, int]]) -> list[dict]:
         """Run normalization for given files."""
-        normalization = self.config.processing.normalization
-        normalized_loc = self.config.storage.normalized
-        raw_base_path = self.config.data.raw_data_path
+        normalization_processor = self.config.processing.normalization
+        normalization_output_loc = self.config.storage.get_step_output(normalization_processor)
+        normalization_input_path = self.config.storage.get_step_input(normalization_processor).get_path()
         memory_multiplier = self.config.ray.memory_multiplier
         
-        # Serialize normalized location once
+        # Serialize normalization output location once
         norm_dict = {
-            'access_type': normalized_loc.get_access_type(),
-            'path': normalized_loc.get_path(),
+            'access_type': normalization_output_loc.get_access_type(),
+            'path': normalization_output_loc.get_path(),
         }
-        if normalized_loc.get_access_type() == 's3tables':
-            norm_dict['table_bucket_arn'] = normalized_loc.table_bucket_arn
-            norm_dict['namespace'] = normalized_loc.namespace
-            norm_dict['table_name'] = normalized_loc.table_name
+        if normalization_output_loc.get_access_type() == 's3tables':
+            norm_dict['table_bucket_arn'] = normalization_output_loc.table_bucket_arn
+            norm_dict['namespace'] = normalization_output_loc.namespace
+            norm_dict['table_name'] = normalization_output_loc.table_name
         
         # Helper function to submit a task
         def submit_task(file_path, file_size):
@@ -323,7 +323,7 @@ class Pipeline:
                     # Read from raw
                     data_access = DataAccessFactory.create('s3', region=region, profile_name=profile)
                     df = data_access.read(fp)
-                    normalized = normalization.normalize(df, data_type, source_path=fp)
+                    normalized = normalization_processor.normalize(df, data_type, source_path=fp)
                     
                     # Write to normalized location
                     if norm_loc_dict['access_type'] == 's3tables':
@@ -365,7 +365,7 @@ class Pipeline:
                         'row_count': row_count,
                         'output_size_mb': output_size_mb,
                         'data_type': data_type,
-                        'stage': str(normalization),
+                        'stage': str(normalization_processor),
                         'message': 'success'
                     }
                 except Exception as e:
@@ -379,12 +379,12 @@ class Pipeline:
                         'row_count': None,
                         'output_size_mb': 0,
                         'data_type': parts[-3] if len(parts := fp.split('/')) >= 3 else 'unknown',
-                        'stage': str(normalization),
+                        'stage': str(normalization_processor),
                         'message': str(e)
                     }
             
             future = normalize_file.remote(
-                file_path, file_size, self.config.region, raw_base_path,
+                file_path, file_size, self.config.region, normalization_input_path,
                 norm_dict, memory_gb, num_cpus, self.config.profile_name
             )
             return future
@@ -397,15 +397,15 @@ class Pipeline:
     
     def _run_repartition(self, file_groups: list[list[tuple[str, int]]]) -> list[dict]:
         """Run repartition for given file groups."""
-        repartition = self.config.processing.repartition
-        repartitioned_loc = self.config.storage.repartitioned
-        input_base_path = self.config.storage.get_step_input(repartition).get_path()
+        repartition_processor = self.config.processing.repartition
+        repartition_output_loc = self.config.storage.get_step_output(repartition_processor)
+        repartition_input_path = self.config.storage.get_step_input(repartition_processor).get_path()
         memory_multiplier = self.config.ray.memory_multiplier
         
-        # Serialize repartitioned location once
+        # Serialize repartition output location once
         repart_dict = {
-            'access_type': repartitioned_loc.get_access_type(),
-            'path': repartitioned_loc.get_path(),
+            'access_type': repartition_output_loc.get_access_type(),
+            'path': repartition_output_loc.get_path(),
         }
         
         # Helper function to submit a task
@@ -478,8 +478,8 @@ class Pipeline:
                 return results
             
             future = repartition_file_group.remote(
-                file_group, self.config.region, input_base_path,
-                repart_dict, repartition.partition_column, repartition.max_retries, repartition.log_interval, memory_gb, num_cpus, self.config.profile_name
+                file_group, self.config.region, repartition_input_path,
+                repart_dict, repartition_processor.partition_column, repartition_processor.max_retries, repartition_processor.log_interval, memory_gb, num_cpus, self.config.profile_name
             )
             return future
         
@@ -500,19 +500,19 @@ class Pipeline:
     def _run_feature_engineering(self, file_groups: List[List[tuple[str, int]]]) -> list[dict]:
         """Run feature engineering for grouped files."""
         feature_engineering_processor = self.config.processing.feature_engineering
-        features_loc = self.config.storage.features
-        feature_engineering_base_path = self.config.storage.get_step_input(feature_engineering_processor).get_path()
+        feature_engineering_output_loc = self.config.storage.get_step_output(feature_engineering_processor)
+        feature_engineering_input_path = self.config.storage.get_step_input(feature_engineering_processor).get_path()
         memory_multiplier = self.config.ray.memory_multiplier
         
-        # Serialize features location once
+        # Serialize feature engineering output location once
         features_dict = {
-            'access_type': features_loc.get_access_type(),
-            'path': features_loc.get_path(),
+            'access_type': feature_engineering_output_loc.get_access_type(),
+            'path': feature_engineering_output_loc.get_path(),
         }
-        if features_loc.get_access_type() == 's3tables':
-            features_dict['table_bucket_arn'] = features_loc.table_bucket_arn
-            features_dict['namespace'] = features_loc.namespace
-            features_dict['table_name'] = features_loc.table_name
+        if feature_engineering_output_loc.get_access_type() == 's3tables':
+            features_dict['table_bucket_arn'] = feature_engineering_output_loc.table_bucket_arn
+            features_dict['namespace'] = feature_engineering_output_loc.namespace
+            features_dict['table_name'] = feature_engineering_output_loc.table_name
         
         # Helper function to submit a task for a file group
         def submit_task(file_group):
@@ -530,7 +530,6 @@ class Pipeline:
             def feature_engineering_group(file_group: List[tuple[str, int]], region: str, fe_base: str, features_loc_dict: dict, mem_gb: float, cpus: int, profile: str, bar_duration_ms: int) -> List[dict]:
                 results = []
                 
-                print(f"[FE Remote 1] Processing group with {len(file_group)} files")
                 for file_path, file_size in file_group:
                     try:
                         import polars as pl
@@ -609,12 +608,9 @@ class Pipeline:
                 
                 return results
             
-            print(f"[FE] Submitting task for file group with {len(file_group)} files")
-            print(f"[FE] First item type: {type(file_group[0])}, value: {file_group[0]}")
             feature_engineering_group_remote = ray.remote(num_cpus=num_cpus, max_retries=0)(feature_engineering_group)
-            print(f"[FE] file_group={file_group}, region={self.config.region}, fe_base={feature_engineering_base_path}, features_dict={features_dict}, mem_gb={memory_gb}, cpus={num_cpus}, profile={self.config.profile_name}, bar_duration_ms={feature_engineering_processor.bar_duration_ms}")
             future = feature_engineering_group_remote.remote(
-                file_group, self.config.region, feature_engineering_base_path,
+                file_group, self.config.region, feature_engineering_input_path,
                 features_dict, memory_gb, num_cpus, self.config.profile_name,
                 feature_engineering_processor.bar_duration_ms
             )
@@ -721,9 +717,9 @@ class Pipeline:
     
     def _run_reconciliation(self, date_type_pairs: list[tuple[str, str]]) -> list[dict]:
         """Run reconciliation for given date/type pairs."""
-        reconciliation = self.config.processing.reconciliation
-        normalized_path = self.config.storage.normalized.get_path()
-        repartitioned_path = self.config.storage.repartitioned.get_path()
+        reconciliation_processor = self.config.processing.reconciliation
+        reconciliation_input_path = self.config.storage.get_step_input(reconciliation_processor).get_path()
+        reconciliation_output_path = self.config.storage.get_step_output(reconciliation_processor).get_path()
         
         @ray.remote(num_cpus=1, max_retries=0)
         def reconcile_date_type(date: str, data_type: str, region: str, norm_path: str, repart_path: str, profile: str) -> dict:
@@ -747,7 +743,7 @@ class Pipeline:
                 }
         
         futures = [
-            reconcile_date_type.remote(date, data_type, self.config.region, normalized_path, repartitioned_path, self.config.profile_name)
+            reconcile_date_type.remote(date, data_type, self.config.region, reconciliation_input_path, reconciliation_output_path, self.config.profile_name)
             for date, data_type in date_type_pairs
         ]
         results = ray.get(futures)

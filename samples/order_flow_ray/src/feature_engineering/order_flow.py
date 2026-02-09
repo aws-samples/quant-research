@@ -87,17 +87,23 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
         files.sort(key=lambda x: x[1], reverse=(sort_order == 'desc'))
         return files
     
-    def get_failed_items(self, results: list) -> list[tuple[str, int]]:
-        """Extract failed files from feature engineering results.
+    def get_failed_items(self, results: list) -> list[list[tuple[str, int]]]:
+        """Extract failed files from feature engineering results and re-group them.
         
         Args:
             results: List of feature engineering results
             
         Returns:
-            List of (file_path, file_size) tuples that failed
+            List of file groups containing (file_path, file_size) tuples that failed
         """
         failed = [r for r in results if r['message'] != 'success']
-        return [(r['input_path'], int(r.get('size_gb', 1.0) * (1024**3))) for r in failed]
+        failed_files = [(r['input_path'], int(r.get('size_gb', 1.0) * (1024**3))) for r in failed]
+        
+        # Re-group the failed files using the same logic as original grouping
+        if failed_files:
+            return self.group_files_for_processing(failed_files)
+        else:
+            return []
     
     def group_files_for_processing(self, files: list[tuple[str, int]]) -> list[list[tuple[str, int]]]:
         """Group files by exchange for batch processing.

@@ -530,7 +530,7 @@ class Pipeline:
             def feature_engineering_group(file_group: List[tuple[str, int]], region: str, fe_base: str, features_loc_dict: dict, mem_gb: float, cpus: int, profile: str, bar_duration_ms: int) -> List[dict]:
                 results = []
                 
-                print(f"[FE Remote] Processing group with {len(file_group)} files")
+                print(f"[FE Remote 1] Processing group with {len(file_group)} files")
                 for file_path, file_size in file_group:
                     try:
                         import polars as pl
@@ -609,8 +609,10 @@ class Pipeline:
                 
                 return results
             
-            print(f"[FE] Submitting task for file group with {len(file_group)} files")
-            future = feature_engineering_group.remote(
+            print(f"[FE_1] Submitting task for file group with {len(file_group)} files")
+            feature_engineering_group_remote = ray.remote(num_cpus=num_cpus, max_retries=0)(feature_engineering_group)
+            print(f"[FE_2] Submitting task for file group with {len(file_group)} files")
+            future = feature_engineering_group_remote.remote(
                 file_group, self.config.region, feature_engineering_base_path,
                 features_dict, memory_gb, num_cpus, self.config.profile_name,
                 self.config.processing.feature_engineering.bar_duration_ms

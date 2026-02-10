@@ -34,7 +34,7 @@ class FeatureEngineering(ABC):
         """
         pass
 
-
+# the largest file in the batch is: 's3://orderflowanalysis/intermediate/repartitioned_v3/2024/08/05/level2q/AMERICAS/S/XNAS-20240805.parquet'
 class OrderFlowFeatureEngineering(FeatureEngineering):
     """Unified feature engineering for both L2Q and Trade data."""
     

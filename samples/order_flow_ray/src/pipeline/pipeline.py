@@ -173,13 +173,11 @@ class Pipeline:
     
     def _repartition_step(self, files: list[tuple[str, int]]) -> Any:
         """Execute repartition step with retry logic."""
-        # Group files by size first
-        file_groups = self.data_access.group_files_by_size(files)
-        print(f"Grouped {len(files)} files into {len(file_groups)} groups for repartition")
+        print(f"Processing {len(files)} file groups for repartition")
         
         return self._execute_step_with_retry(
             'repartition',
-            file_groups,
+            files,
             self.config.processing.repartition,
             self._run_repartition
         )

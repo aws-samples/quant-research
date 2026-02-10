@@ -614,16 +614,21 @@ class L2QFeatureEngineering(FeatureEngineering):
         else:
             pipeline = all_sections
         
-        # Flatten all features
-        features = []
-        for section, exprs in pipeline.items():
-            features.extend(exprs)
+        # Calculate sections separately and join results
+        group_keys = ['bar_id', 'TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker']
         
-        # Log feature computation info
-        print(f"Running {len(pipeline)} sections with {len(features)} total features")
+        # Start with first section as base
+        first_section = list(pipeline.keys())[0]
+        result = df.group_by(group_keys).agg(pipeline[first_section])
+        print(f"Completed {first_section}: {len(pipeline[first_section])} features")
         
-        # Group by bar and compute all features on materialized data
-        result = df.group_by(['bar_id', 'TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker']).agg(features)
+        # Add remaining sections incrementally
+        for section_name, section_features in list(pipeline.items())[1:]:
+            section_result = df.group_by(group_keys).agg(section_features)
+            result = result.join(section_result, on=group_keys, how='inner')
+            print(f"Completed {section_name}: {len(section_features)} features")
+        
+        print(f"All sections complete: {len(pipeline)} sections, {result.width - len(group_keys)} total features")
         
         # Return as LazyFrame for API compatibility
         return result.lazy()

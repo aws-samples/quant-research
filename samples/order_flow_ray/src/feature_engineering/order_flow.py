@@ -106,33 +106,40 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
             return []
     
     def group_files_for_processing(self, files: list[tuple[str, int]]) -> list[list[tuple[str, int]]]:
-        """Group files by exchange for batch processing.
+        """Group files by target size based on max file size.
         
         Args:
             files: List of (file_path, file_size) tuples
             
         Returns:
-            List of file groups, each group contains trades+level2q files for same exchange
+            List of file groups, each group has total size roughly equal to max file size
         """
-        from collections import defaultdict
+        if not files:
+            return []
         
-        groups = defaultdict(list)
+        # Find max file size as target group size
+        max_file_size = max(size for _, size in files)
+        target_group_size = max_file_size
+        
+        groups = []
+        current_group = []
+        current_size = 0
         
         for file_path, file_size in files:
-            # Extract exchange from filename
-            # Expected format: trades-XASE-20240604.parquet or XASE-20240604.parquet
-            filename = file_path.split('/')[-1]
+            # If adding this file exceeds target, start new group (unless current group is empty)
+            if current_size + file_size > target_group_size and current_group:
+                groups.append(current_group)
+                current_group = []
+                current_size = 0
             
-            if filename.startswith('trades-'):
-                exchange = filename.split('-')[1]
-            elif '-' in filename:
-                exchange = filename.split('-')[0]
-            else:
-                exchange = filename.split('.')[0]
-            
-            groups[exchange].append((file_path, file_size))
+            current_group.append((file_path, file_size))
+            current_size += file_size
         
-        return list(groups.values())
+        # Add last group if not empty
+        if current_group:
+            groups.append(current_group)
+        
+        return groups
 
 
 class L2QFeatureEngineering(FeatureEngineering):

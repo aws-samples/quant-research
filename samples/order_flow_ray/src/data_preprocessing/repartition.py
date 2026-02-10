@@ -6,15 +6,13 @@ import polars as pl
 class Repartition:
     """Repartition data by adding partition key to S3 path structure."""
     
-    def __init__(self, partition_column: str, max_retries: int, log_interval: int):
-        """Initialize repartition with partition column and retry configuration.
+    def __init__(self, max_retries: int, log_interval: int):
+        """Initialize repartition with retry configuration.
         
         Args:
-            partition_column: Column name to partition by (e.g., 'Ticker', 'Model', 'Strategy')
             max_retries: Maximum retry attempts for failed files
             log_interval: Log progress every N partitions
         """
-        self.partition_column = partition_column
         self.max_retries = max_retries
         self.log_interval = log_interval
     

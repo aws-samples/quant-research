@@ -31,7 +31,7 @@ def main():
             data_types=['trades']
         ),
         processing=ProcessingConfig(
-            repartition=Repartition(partition_column='Ticker', max_retries=3, log_interval=1)
+            repartition=Repartition(max_retries=3, log_interval=1)
         ),
         storage=StorageConfig(
             raw_data=S3Location(path='s3://orderflowanalysis/intermediate/normalized'),

@@ -542,7 +542,7 @@ class Pipeline:
                 num_cpus = ceil(memory_gb / self.config.ray.memory_per_core_gb) + self.config.ray.cpu_buffer
             
             #@ray.remote(num_cpus=num_cpus, max_retries=0)
-            def feature_engineering_group(file_group: List[tuple[str, int]], region: str, fe_base: str, features_loc_dict: dict, mem_gb: float, cpus: int, profile: str, bar_duration_ms: int) -> List[dict]:
+            def feature_engineering_group(file_group: List[tuple[str, int]], region: str, fe_base: str, features_loc_dict: dict, mem_gb: float, cpus: int, profile: str, bar_duration_ms: int, max_section: int | None) -> List[dict]:
                 print(f"Feature engineering group starting with {cpus} CPUs, {mem_gb:.1f}GB memory for {len(file_group)} files")
                 results = []
                 
@@ -561,7 +561,7 @@ class Pipeline:
                         input_row_count = df.select(pl.len()).collect().item()
                         
                         # Apply feature engineering
-                        feature_eng = OrderFlowFeatureEngineering(bar_duration_ms=bar_duration_ms)
+                        feature_eng = OrderFlowFeatureEngineering(bar_duration_ms=bar_duration_ms, max_section=max_section)
                         features = feature_eng.feature_computation(df, data_type)
                         
                         # Write to features location
@@ -630,7 +630,7 @@ class Pipeline:
             future = feature_engineering_group_remote.remote(
                 file_group, self.config.region, feature_engineering_input_path,
                 features_dict, memory_gb, num_cpus, self.config.profile_name,
-                feature_engineering_processor.bar_duration_ms
+                feature_engineering_processor.bar_duration_ms, feature_engineering_processor.max_section
             )
             return future
         

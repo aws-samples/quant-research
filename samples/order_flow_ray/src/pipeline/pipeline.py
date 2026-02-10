@@ -536,6 +536,7 @@ class Pipeline:
             
             #@ray.remote(num_cpus=num_cpus, max_retries=0)
             def feature_engineering_group(file_group: List[tuple[str, int]], region: str, fe_base: str, features_loc_dict: dict, mem_gb: float, cpus: int, profile: str, bar_duration_ms: int) -> List[dict]:
+                print(f"Feature engineering group starting with {cpus} CPUs, {mem_gb:.1f}GB memory for {len(file_group)} files")
                 results = []
                 
                 for file_path, file_size in file_group:

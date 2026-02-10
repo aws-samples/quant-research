@@ -117,9 +117,10 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
         if not files:
             return []
         
-        # Find max file size as target group size
+        # Find max file size as target group size, with minimum of 10GB
         max_file_size = max(size for _, size in files)
-        target_group_size = max_file_size
+        min_target_size = 10 * (1024 ** 3)  # 10GB in bytes
+        target_group_size = max(max_file_size, min_target_size)
         
         groups = []
         current_group = []

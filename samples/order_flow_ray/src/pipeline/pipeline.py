@@ -139,7 +139,7 @@ class Pipeline:
                 # Sort groups by file count in ascending order
                 grouped_files.sort(key=len)
                 avg_files_per_group = len(filtered_files) / len(grouped_files) if grouped_files else 0
-                total_size_gb = sum(size for _, size, _ in filtered_files)
+                total_size_gb = sum(size for _, size in filtered_files)
                 avg_size_per_group_gb = total_size_gb / len(grouped_files) if grouped_files else 0
                 print(f"Grouped into {len(grouped_files)} file groups (avg {avg_files_per_group:.1f} files/group, avg {avg_size_per_group_gb:.2f} GB/group)")
                 print(f"\nStarting feature engineering across {len(grouped_files)} groups...")

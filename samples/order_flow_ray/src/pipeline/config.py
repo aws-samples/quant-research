@@ -89,6 +89,7 @@ class StorageConfig:
         models: Model storage location
         predictions: Predictions storage location
         backtest: Backtest results location
+        metadata: Metadata and inventory files location
     """
     raw_data: StorageLocation
     normalized: StorageLocation
@@ -98,6 +99,7 @@ class StorageConfig:
     models: StorageLocation
     predictions: StorageLocation
     backtest: StorageLocation
+    metadata: StorageLocation
     
     def get_step_input_output(self, step_instance) -> tuple[StorageLocation, StorageLocation]:
         """Return (input_location, output_location) for a given step instance."""

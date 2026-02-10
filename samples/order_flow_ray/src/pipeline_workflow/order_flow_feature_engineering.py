@@ -37,7 +37,8 @@ def main():
             features=S3Location(path='s3://orderflowanalysis/intermediate/features'),
             models=S3Location(path='s3://orderflowanalysis/output/models'),
             predictions=S3Location(path='s3://orderflowanalysis/output/predictions'),
-            backtest=S3Location(path='s3://orderflowanalysis/output/backtest')
+            backtest=S3Location(path='s3://orderflowanalysis/output/backtest'),
+            metadata=S3Location(path='s3://orderflowanalysis/metadata')
         ),
         ray=RayConfig(runtime_env={}, flat_core_count=170)
     )

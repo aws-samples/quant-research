@@ -6,6 +6,7 @@ from math import ceil
 from typing import Any, List
 from .config import PipelineConfig
 from data_preprocessing.data_access.factory import DataAccessFactory
+from botocore.exceptions import NoCredentialsError
 
 
 class Pipeline:
@@ -124,9 +125,14 @@ class Pipeline:
             if self.config.processing.feature_engineering:
                 print("Running feature engineering...")
                 input_path = self.config.storage.get_step_input(self.config.processing.feature_engineering).get_path()
-                discovered_files = self.config.processing.feature_engineering.discover_files(
-                    self.data_access, input_path, self.config.ray.file_sort_order, 'asynch'
-                )
+                try:
+                    discovered_files = self.config.processing.feature_engineering.discover_files(
+                        self.data_access, input_path, self.config.ray.file_sort_order, 'asynch'
+                    )
+                    self._write_inventory('feature_engineering', discovered_files)
+                except NoCredentialsError:
+                    print("Discovery failed due to credentials, reading from inventory...")
+                    discovered_files = self._read_inventory('feature_engineering')
                 print(f"Discovered {len(discovered_files)} files from {input_path}")
                 filtered_files = self._apply_filtering(discovered_files, files_slice, specific_files)
                 print(f"After filtering: {len(filtered_files)} files selected for processing")
@@ -813,3 +819,21 @@ class Pipeline:
         """Shutdown Ray."""
         if ray.is_initialized():
             ray.shutdown()
+    
+    def _write_inventory(self, step_name: str, files: list[tuple[str, int]]):
+        """Write discovered files to inventory CSV."""
+        df = pl.DataFrame({
+            'file_path': [f[0] for f in files], 
+            'file_size': [f[1] for f in files]
+        })
+        inventory_path = f"{self.config.storage.metadata.get_path().rstrip('/')}/{step_name}_input_inventory.csv"
+        self.data_access.write_csv(df, inventory_path)
+        print(f"Wrote inventory to {inventory_path}")
+    
+    def _read_inventory(self, step_name: str) -> list[tuple[str, int]]:
+        """Read discovered files from inventory CSV."""
+        inventory_path = f"{self.config.storage.metadata.get_path().rstrip('/')}/{step_name}_input_inventory.csv"
+        df = self.data_access.read(inventory_path)
+        files = [(row['file_path'], int(row['file_size'])) for row in df.collect().to_dicts()]
+        print(f"Read {len(files)} files from inventory {inventory_path}")
+        return files

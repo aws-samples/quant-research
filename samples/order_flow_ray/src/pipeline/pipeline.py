@@ -131,6 +131,11 @@ class Pipeline:
                 filtered_files = self._apply_filtering(discovered_files, files_slice, specific_files)
                 print(f"After filtering: {len(filtered_files)} files selected for processing")
                 grouped_files = self.config.processing.feature_engineering.group_files_for_processing(filtered_files)
+                # Apply group filtering if configured
+                if hasattr(self.config.processing.feature_engineering, 'group_filter') and self.config.processing.feature_engineering.group_filter:
+                    original_count = len(grouped_files)
+                    grouped_files = self.config.processing.feature_engineering.filter_groups_by_formulas(grouped_files, self.config.processing.feature_engineering.group_filter)
+                    print(f"Group filtering applied: {original_count} -> {len(grouped_files)} groups")
                 # Sort groups by file count in ascending order
                 grouped_files.sort(key=len)
                 avg_files_per_group = len(filtered_files) / len(grouped_files) if grouped_files else 0

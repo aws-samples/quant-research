@@ -8,15 +8,17 @@ from .base import TimeBarFeatureEngineering
 class FeatureEngineering(ABC):
     """Base class for feature engineering with configurable bar aggregation."""
     
-    def __init__(self, bar_duration_ms: int = 1000, max_retries: int = 3):
+    def __init__(self, bar_duration_ms: int = 1000, max_retries: int = 3, group_filter: list[str] | None = None):
         """Feature engineering initialization.
         
         Args:
             bar_duration_ms: Bar duration in milliseconds
             max_retries: Maximum retry attempts
+            group_filter: Optional list of filter formulas for group selection
         """
         self.bar_duration_ms = bar_duration_ms
         self.max_retries = max_retries
+        self.group_filter = group_filter or []
     
     @abstractmethod
     def feature_computation(self, data: pl.LazyFrame) -> pl.LazyFrame:
@@ -148,6 +150,45 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
             groups.append(group_with_count)
         
         return groups
+    
+    def filter_groups_by_formulas(self, grouped_files: list[list[tuple[str, float, int]]], formulas: list[str]) -> list[list[tuple[str, float, int]]]:
+        """Filter groups using eval formulas.
+        
+        Args:
+            grouped_files: List of file groups
+            formulas: List of formula strings to eval (AND logic)
+            
+        Returns:
+            Filtered groups that satisfy all formulas
+        """
+        if not formulas:
+            return grouped_files
+        
+        filtered_groups = []
+        
+        for group in grouped_files:
+            if not group:
+                continue
+                
+            # Extract variables for formulas
+            file_count = group[0][2]  # 3rd element from first tuple
+            total_size = sum(file_size for _, file_size, _ in group)
+            
+            # Check all formulas
+            passes_all = True
+            for formula in formulas:
+                try:
+                    if not eval(formula, {"file_count": file_count, "total_size": total_size, "len": len, "group": group}):
+                        passes_all = False
+                        break
+                except:
+                    passes_all = False  # Invalid formula fails
+                    break
+            
+            if passes_all:
+                filtered_groups.append(group)
+        
+        return filtered_groups
 
 
 class L2QFeatureEngineering(FeatureEngineering):

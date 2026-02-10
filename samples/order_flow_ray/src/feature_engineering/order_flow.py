@@ -581,7 +581,7 @@ class L2QFeatureEngineering(FeatureEngineering):
         predicted = slope * x + intercept
         return ((y - predicted) ** 2).mean()
     
-    def feature_computation(self, data: pl.LazyFrame) -> pl.LazyFrame:
+    def feature_computation(self, data: pl.LazyFrame, max_section: int = 8) -> pl.LazyFrame:
         """L2Q feature computation pipeline."""
         # Add bar_id and bar_id_dt
         df = TimeBarFeatureEngineering.bar_time_addition(data, 'TimestampNanoseconds', self.bar_duration_ms)
@@ -590,7 +590,7 @@ class L2QFeatureEngineering(FeatureEngineering):
         df = df.sort(['TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker', 'TimestampNanoseconds'])
         
         # Build feature pipeline
-        pipeline = {
+        all_sections = {
             'section1': self._section1_bar_metadata(df),
             'section2': self._section2_quote_activity(df),
             'section3': self._section3_spread_features(df),
@@ -600,6 +600,8 @@ class L2QFeatureEngineering(FeatureEngineering):
             'section7': self._section7_trend_features(df),
             'section8': self._section8_trend_vol_features(df)
         }
+        
+        pipeline = {k: v for k, v in all_sections.items() if int(k.replace('section', '')) <= max_section}
         
         # Flatten all features
         features = []

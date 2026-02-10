@@ -8,17 +8,19 @@ from .base import TimeBarFeatureEngineering
 class FeatureEngineering(ABC):
     """Base class for feature engineering with configurable bar aggregation."""
     
-    def __init__(self, bar_duration_ms: int = 1000, max_retries: int = 3, group_filter: list[str] | None = None):
+    def __init__(self, bar_duration_ms: int = 1000, max_retries: int = 3, group_filter: list[str] | None = None, max_section: int | None = None):
         """Feature engineering initialization.
         
         Args:
             bar_duration_ms: Bar duration in milliseconds
             max_retries: Maximum retry attempts
             group_filter: Optional list of filter formulas for group selection
+            max_section: Maximum section to run (None for all sections)
         """
         self.bar_duration_ms = bar_duration_ms
         self.max_retries = max_retries
         self.group_filter = group_filter or []
+        self.max_section = max_section
     
     @abstractmethod
     def feature_computation(self, data: pl.LazyFrame) -> pl.LazyFrame:
@@ -48,7 +50,7 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
         """
         if data_type == 'level2q':
             l2q_eng = L2QFeatureEngineering(self.bar_duration_ms, self.max_retries)
-            return l2q_eng.feature_computation(data)
+            return l2q_eng.feature_computation(data, self.max_section)
         else:
             trade_eng = TradeFeatureEngineering(self.bar_duration_ms, self.max_retries)
             return trade_eng.feature_computation(data)
@@ -581,7 +583,7 @@ class L2QFeatureEngineering(FeatureEngineering):
         predicted = slope * x + intercept
         return ((y - predicted) ** 2).mean()
     
-    def feature_computation(self, data: pl.LazyFrame, max_section: int = 8) -> pl.LazyFrame:
+    def feature_computation(self, data: pl.LazyFrame, max_section: int | None) -> pl.LazyFrame:
         """L2Q feature computation pipeline."""
         # Add bar_id and bar_id_dt
         df = TimeBarFeatureEngineering.bar_time_addition(data, 'TimestampNanoseconds', self.bar_duration_ms)
@@ -601,7 +603,10 @@ class L2QFeatureEngineering(FeatureEngineering):
             'section8': self._section8_trend_vol_features(df)
         }
         
-        pipeline = {k: v for k, v in all_sections.items() if int(k.replace('section', '')) <= max_section}
+        if max_section is not None:
+            pipeline = {k: v for k, v in all_sections.items() if int(k.replace('section', '')) <= max_section}
+        else:
+            pipeline = all_sections
         
         # Flatten all features
         features = []

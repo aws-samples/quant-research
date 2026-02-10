@@ -74,7 +74,7 @@ def test_single_shard():
         print(f"Data type: {data_type}")
         
         # Initialize feature engineering
-        feature_eng = OrderFlowFeatureEngineering(bar_duration_ms=BAR_DURATION_MS)
+        feature_eng = OrderFlowFeatureEngineering(bar_duration_ms=BAR_DURATION_MS, max_section=2)
         
         # Apply feature engineering
         print("Computing features...")

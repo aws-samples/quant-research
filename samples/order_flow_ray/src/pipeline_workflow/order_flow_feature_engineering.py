@@ -16,14 +16,18 @@ def main():
     config = PipelineConfig(
         region='us-east-1',
         data=DataConfig(
-            raw_data_path='s3://orderflowanalysis/intermediate/repartitioned_v3',
+            raw_data_path='s3://orderflowanalysis/intermediate/normalized',
             start_date='2024-12-31',
             end_date='2024-12-31',
             exchanges=['AMERICAS'],
             data_types=['trades', 'level2q']
         ),
         processing=ProcessingConfig(
-            feature_engineering=OrderFlowFeatureEngineering(bar_duration_ms=BAR_DURATION_MS)
+            feature_engineering=OrderFlowFeatureEngineering(
+                bar_duration_ms=BAR_DURATION_MS,
+                max_section=7,
+                group_filter=None
+            )
         ),
         storage=StorageConfig(
             raw_data=S3Location(path='s3://orderflowanalysis/intermediate/normalized'),
@@ -35,7 +39,7 @@ def main():
             predictions=S3Location(path='s3://orderflowanalysis/output/predictions'),
             backtest=S3Location(path='s3://orderflowanalysis/output/backtest')
         ),
-        ray=RayConfig(runtime_env={}, flat_core_count=17)
+        ray=RayConfig(runtime_env={"working_dir": os.path.dirname(os.path.dirname(os.path.abspath(__file__)))}, flat_core_count=170)
     )
     
     # Run pipeline

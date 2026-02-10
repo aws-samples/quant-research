@@ -139,7 +139,7 @@ class Pipeline:
                 # Sort groups by file count in ascending order
                 grouped_files.sort(key=len)
                 avg_files_per_group = len(filtered_files) / len(grouped_files) if grouped_files else 0
-                total_size_gb = sum(size for _, size in filtered_files)
+                total_size_gb = sum(size for _, size, _ in filtered_files)
                 avg_size_per_group_gb = total_size_gb / len(grouped_files) if grouped_files else 0
                 print(f"Grouped into {len(grouped_files)} file groups (avg {avg_files_per_group:.1f} files/group, avg {avg_size_per_group_gb:.2f} GB/group)")
                 print(f"\nStarting feature engineering across {len(grouped_files)} groups...")
@@ -536,7 +536,7 @@ class Pipeline:
                 memory_gb = num_cpus * self.config.ray.memory_per_core_gb
             else:
                 # Use largest file size in the group
-                max_file_size = max(size for _, size in file_group)
+                max_file_size = max(size for _, size, _ in file_group)
                 memory_bytes = int(max_file_size * memory_multiplier)
                 memory_gb = memory_bytes / (1024 ** 3)
                 num_cpus = ceil(memory_gb / self.config.ray.memory_per_core_gb) + self.config.ray.cpu_buffer
@@ -546,7 +546,7 @@ class Pipeline:
                 print(f"Feature engineering group starting with {cpus} CPUs, {mem_gb:.1f}GB memory for {len(file_group)} files")
                 results = []
                 
-                for file_path, file_size in file_group:
+                for file_path, file_size, file_count in file_group:
                     try:
                         import polars as pl
                         from data_preprocessing.data_access.factory import DataAccessFactory

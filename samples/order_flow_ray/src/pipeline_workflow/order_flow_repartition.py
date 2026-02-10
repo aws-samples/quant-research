@@ -36,13 +36,13 @@ def main():
         storage=StorageConfig(
             raw_data=S3Location(path='s3://orderflowanalysis/intermediate/normalized'),
             normalized=S3Location(path='s3://orderflowanalysis/intermediate/normalized'),
-            repartitioned=S3Location(path='s3://orderflowanalysis/intermediate/repartitioned_v2'),
+            repartitioned=S3Location(path='s3://orderflowanalysis/intermediate/repartitioned_v3'),
             features=S3Location(path='s3://orderflowanalysis/intermediate/features'),
             models=S3Location(path='s3://orderflowanalysis/output/models'),
             predictions=S3Location(path='s3://orderflowanalysis/output/predictions'),
             backtest=S3Location(path='s3://orderflowanalysis/output/backtest')
         ),
-        ray=RayConfig(runtime_env={}, flat_core_count=3)
+        ray=RayConfig(runtime_env={}, flat_core_count=17)
     )
     
     # Run pipeline

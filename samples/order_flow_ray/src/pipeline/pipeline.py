@@ -127,8 +127,15 @@ class Pipeline:
                 discovered_files = self.config.processing.feature_engineering.discover_files(
                     self.data_access, input_path, self.config.ray.file_sort_order, 'asynch'
                 )
+                print(f"Discovered {len(discovered_files)} files from {input_path}")
                 filtered_files = self._apply_filtering(discovered_files, files_slice, specific_files)
+                print(f"After filtering: {len(filtered_files)} files selected for processing")
                 grouped_files = self.config.processing.feature_engineering.group_files_for_processing(filtered_files)
+                avg_files_per_group = len(filtered_files) / len(grouped_files) if grouped_files else 0
+                total_size_gb = sum(size for _, size in filtered_files)
+                avg_size_per_group_gb = total_size_gb / len(grouped_files) if grouped_files else 0
+                print(f"Grouped into {len(grouped_files)} file groups (avg {avg_files_per_group:.1f} files/group, avg {avg_size_per_group_gb:.2f} GB/group)")
+                print(f"\nStarting feature engineering across {len(grouped_files)} groups...")
                 data = self._feature_engineering_step(grouped_files)
             
             if self.config.processing.training:
@@ -272,10 +279,13 @@ class Pipeline:
                 input_path = result.get('input_path', 'unknown')
                 output_path = result.get('output_path', 'unknown')
                 row_count = result.get('row_count', 0)
+                input_row_count = result.get('input_row_count')
                 if step_name == 'normalization':
                     input_size_mb = result.get('size_gb', 0) * 1024
                     output_size_mb = result.get('output_size_mb', 0)
                     print(f"  {input_path} -> {output_path} ({row_count:,} rows, {input_size_mb:.1f}MB -> {output_size_mb:.1f}MB)")
+                elif step_name == 'feature_engineering' and input_row_count is not None:
+                    print(f"  {input_path} -> {output_path} ({input_row_count:,} -> {row_count:,} rows)")
                 else:
                     print(f"  {input_path} -> {output_path} ({row_count:,} rows)")
         
@@ -540,6 +550,7 @@ class Pipeline:
                         # Read from normalized
                         data_access = DataAccessFactory.create('s3', region=region, profile_name=profile)
                         df = data_access.read(file_path)
+                        input_row_count = df.select(pl.len()).collect().item()
                         
                         # Apply feature engineering
                         feature_eng = OrderFlowFeatureEngineering(bar_duration_ms=bar_duration_ms)
@@ -581,6 +592,7 @@ class Pipeline:
                             'memory_gb': mem_gb,
                             'cpus': cpus,
                             'input_path': file_path,
+                            'input_row_count': input_row_count,
                             'output_path': output_path,
                             'row_count': row_count,
                             'output_size_mb': output_size_mb,

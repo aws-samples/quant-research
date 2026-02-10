@@ -589,7 +589,13 @@ class L2QFeatureEngineering(FeatureEngineering):
         df = TimeBarFeatureEngineering.bar_time_addition(data, 'TimestampNanoseconds', self.bar_duration_ms)
         
         # Sort by grouping keys and timestamp to ensure proper shift() order, then materialize
-        df = df.sort(['TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker', 'TimestampNanoseconds']).collect().lazy()
+        df = df.sort(['TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker', 'TimestampNanoseconds']).collect()
+        
+        # Log materialization info
+        memory_mb = df.estimated_size('mb')
+        row_count = len(df)
+        col_count = len(df.columns)
+        print(f"Data materialized: {row_count:,} rows × {col_count} cols = {memory_mb:.1f} MB")
         
         # Build feature pipeline
         all_sections = {
@@ -613,8 +619,14 @@ class L2QFeatureEngineering(FeatureEngineering):
         for section, exprs in pipeline.items():
             features.extend(exprs)
         
-        # Group by bar and compute all features
-        return df.group_by(['bar_id', 'TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker']).agg(features)
+        # Log feature computation info
+        print(f"Running {len(pipeline)} sections with {len(features)} total features")
+        
+        # Group by bar and compute all features on materialized data
+        result = df.group_by(['bar_id', 'TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker']).agg(features)
+        
+        # Return as LazyFrame for API compatibility
+        return result.lazy()
     
     def failure_extraction(self, results: List[Any]) -> List[Any]:
         """Failed L2Q item extraction."""

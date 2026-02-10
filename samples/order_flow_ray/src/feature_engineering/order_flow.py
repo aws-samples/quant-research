@@ -588,8 +588,8 @@ class L2QFeatureEngineering(FeatureEngineering):
         # Add bar_id and bar_id_dt
         df = TimeBarFeatureEngineering.bar_time_addition(data, 'TimestampNanoseconds', self.bar_duration_ms)
         
-        # Sort by grouping keys and timestamp to ensure proper shift() order
-        df = df.sort(['TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker', 'TimestampNanoseconds'])
+        # Sort by grouping keys and timestamp to ensure proper shift() order, then materialize
+        df = df.sort(['TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker', 'TimestampNanoseconds']).collect().lazy()
         
         # Build feature pipeline
         all_sections = {

@@ -122,6 +122,9 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
         min_target_size = 10 * (1024 ** 3)  # 10GB in bytes
         target_group_size = max(max_file_size, min_target_size)
         
+        print(f"Max file size detected: {max_file_size / (1024**3):.2f} GB")
+        print(f"Target group size set to: {target_group_size / (1024**3):.2f} GB")
+        
         groups = []
         current_group = []
         current_size = 0

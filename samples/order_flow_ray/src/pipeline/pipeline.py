@@ -563,6 +563,7 @@ class Pipeline:
                         # Apply feature engineering
                         feature_eng = OrderFlowFeatureEngineering(bar_duration_ms=bar_duration_ms, max_section=max_section)
                         features = feature_eng.feature_computation(df, data_type)
+                        print(f"Feature calculation complete for {data_type}: {file_path} ({file_size} bytes, group {len(file_group)} files)")
                         
                         # Write to features location
                         if features_loc_dict['access_type'] == 's3tables':
@@ -582,6 +583,8 @@ class Pipeline:
                             output_path = f"{features_loc_dict['path'].rstrip('/')}/{relative_path}"
                             output_path = output_path.replace('.parquet', f'_features_{bar_duration_ms}ms.parquet')
                             output_access.write(features, output_path)
+                        
+                        print(f"Write complete: {file_path} -> {output_path}")
                         
                         row_count = features.select(pl.len()).collect().item()
                         

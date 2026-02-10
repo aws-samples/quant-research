@@ -105,14 +105,14 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
         else:
             return []
     
-    def group_files_for_processing(self, files: list[tuple[str, int]]) -> list[list[tuple[str, int]]]:
+    def group_files_for_processing(self, files: list[tuple[str, int]]) -> list[list[tuple[str, int, int]]]:
         """Group files by target size based on max file size.
         
         Args:
             files: List of (file_path, file_size) tuples
             
         Returns:
-            List of file groups, each group has total size roughly equal to max file size
+            List of file groups, each group has (file_path, file_size, file_count) tuples
         """
         if not files:
             return []
@@ -133,7 +133,9 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
         for file_path, file_size in files:
             # If adding this file exceeds target, start new group (unless current group is empty)
             if current_size + file_size > target_group_size and current_group:
-                groups.append(current_group)
+                # Add file count as third element to each tuple in the group
+                group_with_count = [(fp, fs, len(current_group)) for fp, fs in current_group]
+                groups.append(group_with_count)
                 current_group = []
                 current_size = 0
             
@@ -142,7 +144,8 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
         
         # Add last group if not empty
         if current_group:
-            groups.append(current_group)
+            group_with_count = [(fp, fs, len(current_group)) for fp, fs in current_group]
+            groups.append(group_with_count)
         
         return groups
 

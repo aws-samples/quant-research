@@ -131,6 +131,8 @@ class Pipeline:
                 filtered_files = self._apply_filtering(discovered_files, files_slice, specific_files)
                 print(f"After filtering: {len(filtered_files)} files selected for processing")
                 grouped_files = self.config.processing.feature_engineering.group_files_for_processing(filtered_files)
+                # Sort groups by file count in ascending order
+                grouped_files.sort(key=len)
                 avg_files_per_group = len(filtered_files) / len(grouped_files) if grouped_files else 0
                 total_size_gb = sum(size for _, size in filtered_files)
                 avg_size_per_group_gb = total_size_gb / len(grouped_files) if grouped_files else 0

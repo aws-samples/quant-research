@@ -86,10 +86,7 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
         Returns:
             List of (file_path, file_size) tuples sorted by size
         """
-        print(f"Discovering files in: {normalized_data_path}")
-        files = data_access.list_files_asynch(normalized_data_path, parallel_discovery_threshold)
-        files.sort(key=lambda x: x[1], reverse=(sort_order == 'desc'))
-        return files
+        return data_access.discover_files_asynch(normalized_data_path, sort_order, parallel_discovery_threshold)
     
     def get_failed_items(self, results: list) -> list[list[tuple[str, int]]]:
         """Extract failed files from feature engineering results and re-group them.

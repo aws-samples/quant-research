@@ -171,6 +171,40 @@ class S3DataAccess(DataAccess):
         prefixes = self._discover_prefixes_sequential(bucket, base_prefix, parallel_discovery_threshold)
         return self._list_files_parallel(prefixes)
     
+    def discover_files_asynch(self, s3_path: str, sort_order: str = 'asc', parallel_discovery_threshold: int = 100) -> List[Tuple[str, float]]:
+        """Discover files with sorting - convenience wrapper around list_files_asynch.
+        
+        Args:
+            s3_path: Base S3 path
+            sort_order: Sort order - 'asc' or 'desc'
+            parallel_discovery_threshold: Switch to parallel when prefix count exceeds this
+            
+        Returns:
+            List of (file_path, size_gb) tuples sorted by size
+        """
+        print(f"Discovering files in: {s3_path}")
+        files = self.list_files_asynch(s3_path, parallel_discovery_threshold)
+        files.sort(key=lambda x: x[1], reverse=(sort_order == 'desc'))
+        return files
+    
+    def write_inventory(self, inventory_name: str, files: List[Tuple[str, float]], metadata_path: str):
+        """Write discovered files to inventory CSV."""
+        df = pl.DataFrame({
+            'file_path': [f[0] for f in files], 
+            'file_size': [f[1] for f in files]
+        })
+        inventory_path = f"{metadata_path.rstrip('/')}/{inventory_name}_input_inventory.csv"
+        self.write_csv(df, inventory_path)
+        print(f"Wrote inventory to {inventory_path}")
+    
+    def read_inventory(self, inventory_name: str, metadata_path: str) -> List[Tuple[str, float]]:
+        """Read discovered files from inventory CSV."""
+        inventory_path = f"{metadata_path.rstrip('/')}/{inventory_name}_input_inventory.csv"
+        df = self.read(inventory_path)
+        files = [(row['file_path'], float(row['file_size'])) for row in df.collect().to_dicts()]
+        print(f"Read {len(files)} files from inventory {inventory_path}")
+        return files
+    
     def read(self, s3_path: str, **kwargs) -> pl.LazyFrame:
         """Read parquet from S3 path."""
         storage_options = self._get_storage_options()

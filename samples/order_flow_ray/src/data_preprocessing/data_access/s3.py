@@ -7,6 +7,7 @@ import ray
 
 @ray.remote
 def _list_prefix_remote(region: str, profile_name: str, s3_path: str) -> List[Tuple[str, float]]:
+    print(f"listing:{s3_path} with {profile_name} in region:{region} ")
 
     s3_client = boto3.Session().client('s3',region_name=region)
     

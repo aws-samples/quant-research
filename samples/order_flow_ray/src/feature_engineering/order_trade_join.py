@@ -84,8 +84,26 @@ class OrderTradeFeatureJoin:
         Returns:
             Tuple of (paired_files, unmatched_l2q, unmatched_trade)
         """
-        # TODO: Implement file pairing logic
-        pass
+        # Create lookup dict for trade files
+        trade_dict = {path.replace('/trades/', '/level2q/'): (path, size) for path, size in trade_files}
+        
+        paired_files = []
+        unmatched_l2q = []
+        
+        # Match L2Q files with Trade files
+        for l2q_path, l2q_size in l2q_files:
+            if l2q_path in trade_dict:
+                trade_path, trade_size = trade_dict[l2q_path]
+                max_size = max(l2q_size, trade_size)
+                paired_files.append((l2q_path, trade_path, max_size))
+                del trade_dict[l2q_path]  # Remove matched
+            else:
+                unmatched_l2q.append(l2q_path)
+        
+        # Remaining trade files are unmatched
+        unmatched_trade = [trade_path for trade_path, _ in trade_dict.values()]
+        
+        return paired_files, unmatched_l2q, unmatched_trade
     
     def group_file_pairs_for_processing(self, file_pairs: List[Tuple[str, str, float]]) -> List[List[Tuple[str, str, float]]]:
         """Group file pairs for processing.

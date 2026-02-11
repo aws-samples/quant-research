@@ -200,7 +200,8 @@ class S3DataAccess(DataAccess):
     def read_inventory(self, inventory_name: str, metadata_path: str) -> List[Tuple[str, float]]:
         """Read discovered files from inventory CSV."""
         inventory_path = f"{metadata_path.rstrip('/')}/{inventory_name}_input_inventory.csv"
-        df = self.read(inventory_path)
+        storage_options = self._get_storage_options()
+        df = pl.scan_csv(inventory_path, storage_options=storage_options)
         files = [(row['file_path'], float(row['file_size'])) for row in df.collect().to_dicts()]
         print(f"Read {len(files)} files from inventory {inventory_path}")
         return files

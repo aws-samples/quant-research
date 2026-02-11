@@ -163,15 +163,19 @@ class OrderTradeFeatureJoin:
         l2q_features = pl.scan_parquet(l2q_path)
         trade_features = pl.scan_parquet(trade_path)
         
-        # Join on common columns (assuming BarId exists in both)
+        # Join on multiple keys with full outer join
+        join_keys = ['bar_id', 'TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC']
         joined = l2q_features.join(
             trade_features,
-            on=['BarId'],
-            how='inner',
+            on=join_keys,
+            how='full',
             suffix='_trade'
         )
         
-        return joined
+        # Sort by bar_id and forward fill partitioned by ticker, MIC, ISOExchangeCode
+        return joined.sort('bar_id').with_columns([
+            pl.all().forward_fill().over(['Ticker', 'MIC', 'ISOExchangeCode'])
+        ])
     
     def get_failed_items(self, results: List[dict]) -> List[List[Tuple[str, str, float]]]:
         """Extract failed file pairs for retry.

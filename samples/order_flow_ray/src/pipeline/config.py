@@ -6,6 +6,7 @@ from data_preprocessing.data_normalization import BMLLNormalizer
 from data_preprocessing.repartition import Repartition
 from data_preprocessing.reconciliation import Reconciliation
 from feature_engineering.order_flow import OrderFlowFeatureEngineering
+from feature_engineering.order_trade_join import OrderTradeFeatureJoin
 
 
 class StorageLocation(ABC):
@@ -111,6 +112,8 @@ class StorageConfig:
             return (self.normalized, self.reconciliation)
         elif isinstance(step_instance, OrderFlowFeatureEngineering):
             return (self.repartitioned, self.features)
+        elif isinstance(step_instance, OrderTradeFeatureJoin):
+            return (self.features, self.features)
         else:
             raise ValueError(f"Unknown step type: {type(step_instance)}")
     
@@ -162,6 +165,7 @@ class ProcessingConfig:
         repartition: Repartition instance or None
         reconciliation: Reconciliation instance or None
         feature_engineering: FeatureEngineer instance or None
+        join: OrderTradeFeatureJoin instance or None
         training: Trainer instance or None
         inference: Predictor instance or None
         backtest: Backtester instance or None
@@ -170,6 +174,7 @@ class ProcessingConfig:
     repartition: Any | None = None
     reconciliation: Any | None = None
     feature_engineering: Any | None = None
+    join: Any | None = None
     training: Any | None = None
     inference: Any | None = None
     backtest: Any | None = None

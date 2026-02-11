@@ -24,7 +24,7 @@ class Pipeline:
     def _get_active_steps(self) -> list[tuple[str, Any]]:
         """Return list of (step_name, step_instance) for configured steps."""
         steps = []
-        for step_name in ['normalization', 'repartition', 'reconciliation', 'feature_engineering', 'training', 'inference', 'backtest']:
+        for step_name in ['normalization', 'repartition', 'reconciliation', 'feature_engineering', 'join', 'training', 'inference', 'backtest']:
             step = getattr(self.config.processing, step_name, None)
             if step is not None:
                 steps.append((step_name, step))
@@ -151,6 +151,18 @@ class Pipeline:
                 print(f"Grouped into {len(grouped_files)} file groups (avg {avg_files_per_group:.1f} files/group, avg {avg_size_per_group_gb:.2f} GB/group)")
                 print(f"\nStarting feature engineering across {len(grouped_files)} groups...")
                 data = self._feature_engineering_step(grouped_files)
+            
+            if self.config.processing.join:
+                print("Running feature join...")
+                input_path = self.config.storage.get_step_input(self.config.processing.join).get_path()
+                paired_files, unmatched_l2q, unmatched_trade, all_files = self.config.processing.join.discover_files(
+                    self.data_access, input_path, self.config.ray.file_sort_order, 'asynch'
+                )
+                print(f"Discovered {len(paired_files)} file pairs for joining")
+                filtered_pairs = self._apply_filtering(paired_files, files_slice, specific_files)
+                print(f"After filtering: {len(filtered_pairs)} file pairs selected for processing")
+                grouped_pairs = self.config.processing.join.group_file_pairs_for_processing(filtered_pairs)
+                data = self._join_step(grouped_pairs)
             
             if self.config.processing.training:
                 print("Running training...")
@@ -655,6 +667,128 @@ class Pipeline:
         
         return results
     
+    def _run_join(self, file_pair_groups: List[List[tuple[str, str, float]]]) -> list[dict]:
+        """Run join for grouped file pairs."""
+        join_processor = self.config.processing.join
+        join_output_loc = self.config.storage.get_step_output(join_processor)
+        join_input_path = self.config.storage.get_step_input(join_processor).get_path()
+        memory_multiplier = self.config.ray.memory_multiplier
+        
+        # Serialize join output location once
+        join_dict = {
+            'access_type': join_output_loc.get_access_type(),
+            'path': join_output_loc.get_path(),
+        }
+        if join_output_loc.get_access_type() == 's3tables':
+            join_dict['table_bucket_arn'] = join_output_loc.table_bucket_arn
+            join_dict['namespace'] = join_output_loc.namespace
+            join_dict['table_name'] = join_output_loc.table_name
+        
+        # Helper function to submit a task for a file pair group
+        def submit_task(file_pair_group):
+            if self.config.ray.flat_core_count is not None:
+                num_cpus = self.config.ray.flat_core_count
+                memory_gb = num_cpus * self.config.ray.memory_per_core_gb
+            else:
+                # Use largest file size in the group
+                max_file_size = max(size for _, _, size in file_pair_group)
+                memory_bytes = int(max_file_size * memory_multiplier)
+                memory_gb = memory_bytes / (1024 ** 3)
+                num_cpus = ceil(memory_gb / self.config.ray.memory_per_core_gb) + self.config.ray.cpu_buffer
+            
+            @ray.remote(num_cpus=num_cpus, max_retries=0)
+            def join_file_pair_group(file_pair_group: List[tuple[str, str, float]], region: str, join_base: str, join_loc_dict: dict, mem_gb: float, cpus: int, profile: str, bar_duration_ms: int) -> List[dict]:
+                results = []
+                
+                for l2q_path, trade_path, file_size in file_pair_group:
+                    try:
+                        import polars as pl
+                        from data_preprocessing.data_access.factory import DataAccessFactory
+                        from feature_engineering.order_trade_join import OrderTradeFeatureJoin
+                        
+                        # Read and join features
+                        data_access = DataAccessFactory.create('s3', region=region, profile_name=profile)
+                        join_eng = OrderTradeFeatureJoin(bar_duration_ms=bar_duration_ms)
+                        joined_features = join_eng.join_features(l2q_path, trade_path)
+                        
+                        # Write to join location
+                        if join_loc_dict['access_type'] == 's3tables':
+                            output_access = DataAccessFactory.create(
+                                's3tables',
+                                region=region,
+                                table_bucket_arn=join_loc_dict['table_bucket_arn'],
+                                namespace=join_loc_dict['namespace'],
+                                profile_name=profile
+                            )
+                            table_name = f"{join_loc_dict['table_name']}_joined"
+                            output_access.write(joined_features, table_name, mode='append')
+                            output_path = f"{join_loc_dict['namespace']}.{table_name}"
+                        else:
+                            output_access = data_access
+                            # Create output path based on l2q_path
+                            _, relative_path = l2q_path.split(join_base.rstrip('/') + '/', 1)
+                            output_path = f"{join_loc_dict['path'].rstrip('/')}/{relative_path}"
+                            output_path = output_path.replace('.parquet', f'_joined_{bar_duration_ms}ms.parquet')
+                            output_access.write(joined_features, output_path)
+                        
+                        row_count = joined_features.select(pl.len()).collect().item()
+                        
+                        # Get output file size
+                        if join_loc_dict['access_type'] == 's3tables':
+                            output_size_mb = 0
+                        else:
+                            try:
+                                output_size_mb = output_access.get_file_size(output_path) / (1024 ** 2)
+                            except:
+                                output_size_mb = 0
+                        
+                        results.append({
+                            'file': f"{l2q_path.split('/')[-1]} + {trade_path.split('/')[-1]}",
+                            'size_gb': file_size / (1024 ** 3),
+                            'memory_gb': mem_gb,
+                            'cpus': cpus,
+                            'input_path': f"{l2q_path} + {trade_path}",
+                            'output_path': output_path,
+                            'row_count': row_count,
+                            'output_size_mb': output_size_mb,
+                            'stage': str(join_processor),
+                            'message': 'success'
+                        })
+                        
+                    except Exception as e:
+                        results.append({
+                            'file': f"{l2q_path.split('/')[-1]} + {trade_path.split('/')[-1]}",
+                            'size_gb': file_size / (1024 ** 3),
+                            'memory_gb': mem_gb,
+                            'cpus': cpus,
+                            'input_path': f"{l2q_path} + {trade_path}",
+                            'output_path': None,
+                            'row_count': None,
+                            'output_size_mb': 0,
+                            'stage': str(join_processor),
+                            'message': str(e)
+                        })
+                
+                return results
+            
+            future = join_file_pair_group.remote(
+                file_pair_group, self.config.region, join_input_path,
+                join_dict, memory_gb, num_cpus, self.config.profile_name,
+                join_processor.bar_duration_ms
+            )
+            return future
+        
+        # Submit all group tasks and wait for completion
+        futures = [submit_task(file_pair_group) for file_pair_group in file_pair_groups]
+        group_results = ray.get(futures)
+        
+        # Flatten results from all groups
+        results = []
+        for group_result in group_results:
+            results.extend(group_result)
+        
+        return results
+    
 
     
     def _feature_engineering_step(self, grouped_files: list[list[tuple[str, int]]]) -> Any:
@@ -664,6 +798,15 @@ class Pipeline:
             grouped_files,
             self.config.processing.feature_engineering,
             self._run_feature_engineering
+        )
+    
+    def _join_step(self, grouped_pairs: list[list[tuple[str, str, float]]]) -> Any:
+        """Execute join step with retry logic."""
+        return self._execute_step_with_retry(
+            'join',
+            grouped_pairs,
+            self.config.processing.join,
+            self._run_join
         )
     
     def _training_step(self, data: Any) -> Any:

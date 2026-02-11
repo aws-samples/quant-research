@@ -142,8 +142,12 @@ class OrderTradeFeatureJoin:
         Returns:
             List of file pair groups
         """
-        # TODO: Implement grouping logic
-        pass
+        if not file_pairs:
+            return []
+        
+        # Simple grouping - each pair is its own group for now
+        # Can be enhanced later with size-based grouping
+        return [[pair] for pair in file_pairs]
     
     def join_features(self, l2q_path: str, trade_path: str) -> pl.LazyFrame:
         """Join L2Q and Trade features.
@@ -155,8 +159,19 @@ class OrderTradeFeatureJoin:
         Returns:
             Combined features LazyFrame
         """
-        # TODO: Implement join logic
-        pass
+        # Read both feature files
+        l2q_features = pl.scan_parquet(l2q_path)
+        trade_features = pl.scan_parquet(trade_path)
+        
+        # Join on common columns (assuming BarId exists in both)
+        joined = l2q_features.join(
+            trade_features,
+            on=['BarId'],
+            how='inner',
+            suffix='_trade'
+        )
+        
+        return joined
     
     def get_failed_items(self, results: List[dict]) -> List[List[Tuple[str, str, float]]]:
         """Extract failed file pairs for retry.
@@ -167,5 +182,18 @@ class OrderTradeFeatureJoin:
         Returns:
             List of failed file pair groups
         """
-        # TODO: Implement failure extraction
-        pass
+        failed = [r for r in results if r['message'] != 'success']
+        failed_pairs = []
+        
+        for result in failed:
+            input_path = result.get('input_path', '')
+            if ' + ' in input_path:
+                l2q_path, trade_path = input_path.split(' + ', 1)
+                size_gb = result.get('size_gb', 1.0)
+                failed_pairs.append((l2q_path, trade_path, size_gb * (1024**3)))
+        
+        # Re-group the failed pairs
+        if failed_pairs:
+            return self.group_file_pairs_for_processing(failed_pairs)
+        else:
+            return []

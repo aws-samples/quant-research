@@ -58,9 +58,12 @@ class OrderTradeFeatureJoin:
         """
         print(f"Discovering L2Q and Trade feature files in: {features_path}")
         
-        # Discover both file types
-        l2q_files = self.discover_l2q_files(data_access, features_path, sort_order)
-        trade_files = self.discover_trade_files(data_access, features_path, sort_order)
+        # Discover all files once
+        all_files = data_access.discover_files_asynch(features_path, sort_order)
+        
+        # Split into L2Q and Trade files
+        l2q_files = [(path, size) for path, size in all_files if '/level2q/' in path]
+        trade_files = [(path, size) for path, size in all_files if '/trades/' in path]
         
         print(f"Found {len(l2q_files)} L2Q files and {len(trade_files)} Trade files")
         
@@ -84,8 +87,12 @@ class OrderTradeFeatureJoin:
         Returns:
             Tuple of (paired_files, unmatched_l2q, unmatched_trade)
         """
-        # Create lookup dict for trade files
-        trade_dict = {path.replace('/trades/', '/level2q/'): (path, size) for path, size in trade_files}
+        # Create lookup dict for trade files by converting trade paths to l2q format
+        trade_dict = {}
+        for trade_path, trade_size in trade_files:
+            # Convert /trades/ to /level2q/ to create matching key
+            l2q_key = trade_path.replace('/trades/', '/level2q/')
+            trade_dict[l2q_key] = (trade_path, trade_size)
         
         paired_files = []
         unmatched_l2q = []

@@ -150,6 +150,7 @@ class S3DataAccess(DataAccess):
             List of (file_path, size_gb) tuples
         """
         print(f"Starting parallel file listing across {len(prefixes)} directories...")
+        print(f"Using region: {self.region}, profile_name: {self.profile_name}")
         
         futures = [_list_prefix_remote.remote(self.region, self.profile_name, prefix) for prefix in prefixes]
         results = ray.get(futures)

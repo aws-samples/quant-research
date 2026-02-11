@@ -7,16 +7,7 @@ import ray
 
 @ray.remote
 def _list_prefix_remote(region: str, profile_name: str, s3_path: str) -> List[Tuple[str, float]]:
-    """Ray remote function to list files in a single S3 prefix.
-    
-    Args:
-        region: AWS region
-        profile_name: AWS profile name
-        s3_path: Full S3 path (s3://bucket/prefix/)
-        
-    Returns:
-        List of (file_path, size_gb) tuples
-    """
+
     s3_client = boto3.Session().client('s3',region_name=region)
     
     # Parse s3://bucket/prefix

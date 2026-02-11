@@ -44,7 +44,7 @@ class OrderTradeFeatureJoin:
         all_files = data_access.discover_files_asynch(features_path, sort_order)
         return [(path, size) for path, size in all_files if '/trades/' in path]
     
-    def discover_files(self, data_access, features_path: str, sort_order: str, discovery_mode: str) -> Tuple[List[Tuple[str, str, float]], List[str], List[str]]:
+    def discover_files(self, data_access, features_path: str, sort_order: str, discovery_mode: str) -> Tuple[List[Tuple[str, str, float]], List[str], List[str], List[Tuple[str, float]]]:
         """Discover both L2Q and Trade files for pairing.
         
         Args:
@@ -54,7 +54,7 @@ class OrderTradeFeatureJoin:
             discovery_mode: Discovery mode ('asynch' or 'sync')
             
         Returns:
-            Tuple of (paired_files, unmatched_l2q, unmatched_trade)
+            Tuple of (paired_files, unmatched_l2q, unmatched_trade, all_files)
         """
         print(f"Discovering L2Q and Trade feature files in: {features_path}")
         
@@ -75,7 +75,7 @@ class OrderTradeFeatureJoin:
         if unmatched_trade:
             print(f"Warning: {len(unmatched_trade)} Trade files without matching L2Q files")
         
-        return paired_files, unmatched_l2q, unmatched_trade
+        return paired_files, unmatched_l2q, unmatched_trade, all_files
     
     def pair_files(self, l2q_files: List[Tuple[str, float]], trade_files: List[Tuple[str, float]]) -> Tuple[List[Tuple[str, str, float]], List[str], List[str]]:
         """Pair L2Q and Trade files by path matching.

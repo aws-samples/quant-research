@@ -27,8 +27,8 @@ class OrderTradeFeatureJoin:
         Returns:
             List of (file_path, file_size_gb) tuples for L2Q files
         """
-        l2q_path = f"{features_path.rstrip('/')}/level2q"
-        return data_access.discover_files_asynch(l2q_path, sort_order)
+        all_files = data_access.discover_files_asynch(features_path, sort_order)
+        return [(path, size) for path, size in all_files if '/level2q/' in path]
     
     def discover_trade_files(self, data_access, features_path: str, sort_order: str) -> List[Tuple[str, float]]:
         """Discover Trade feature files.
@@ -41,8 +41,8 @@ class OrderTradeFeatureJoin:
         Returns:
             List of (file_path, file_size_gb) tuples for Trade files
         """
-        trade_path = f"{features_path.rstrip('/')}/trades"
-        return data_access.discover_files_asynch(trade_path, sort_order)
+        all_files = data_access.discover_files_asynch(features_path, sort_order)
+        return [(path, size) for path, size in all_files if '/trades/' in path]
     
     def discover_files(self, data_access, features_path: str, sort_order: str, discovery_mode: str) -> Tuple[List[Tuple[str, str, float]], List[str], List[str]]:
         """Discover both L2Q and Trade files for pairing.

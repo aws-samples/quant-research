@@ -88,44 +88,48 @@ class OrderTradeFeatureJoin:
             Tuple of (paired_files, unmatched_l2q, unmatched_trade)
         """
         def extract_key(path):
-            """Extract matching key: date/region/exchange from path."""
+            """Extract matching key including prefix from path."""
             parts = path.split('/')
-            # Extract: YYYY/MM/DD/AMERICAS/EXCHANGE-YYYYMMDD
-            if len(parts) >= 8:
-                date_part = f"{parts[-6]}/{parts[-5]}/{parts[-4]}"  # YYYY/MM/DD
+            if len(parts) >= 10:
+                # Extract from: .../2024/04/04/trades/AMERICAS/A/trades-@SIP-20240404.parquet
+                year = parts[-7]  # 2024
+                month = parts[-6]  # 04
+                day = parts[-5]  # 04
+                feature_type = parts[-4]  # trades or level2q
                 region = parts[-3]  # AMERICAS
-                filename = parts[-1]  # IEXG-20241224_features_250ms.parquet or trades-IEXG-20241224_features_250ms.parquet
-                # Extract exchange-date from filename
+                prefix = parts[-2]  # A
+                filename = parts[-1]  # trades-@SIP-20240404.parquet
+                # Extract ticker from filename
                 if filename.startswith('trades-'):
-                    exchange_date = filename[7:].split('_')[0]  # Remove 'trades-' prefix
+                    ticker = filename[7:].split('-')[0]  # @SIP
                 else:
-                    exchange_date = filename.split('_')[0]
-                return f"{date_part}/{region}/{exchange_date}"
+                    ticker = filename.split('-')[0]
+                return f"repartitioned_v3/{year}/{month}/{day}/filler/{region}/{prefix}/{ticker}"
             return None
         
-        # Create lookup dict for trade files by matching key
-        trade_dict = {}
-        for trade_path, trade_size in trade_files:
-            key = extract_key(trade_path)
-            if key:
-                trade_dict[key] = (trade_path, trade_size)
+        # Convert to Polars DataFrames
+        l2q_df = pl.DataFrame([
+            {"path": path, "size": size, "match_key": extract_key(path)}
+            for path, size in l2q_files
+        ]).filter(pl.col("match_key").is_not_null())
         
-        paired_files = []
-        unmatched_l2q = []
+        trade_df = pl.DataFrame([
+            {"path": path, "size": size, "match_key": extract_key(path)}
+            for path, size in trade_files
+        ]).filter(pl.col("match_key").is_not_null())
         
-        # Match L2Q files with Trade files
-        for l2q_path, l2q_size in l2q_files:
-            key = extract_key(l2q_path)
-            if key and key in trade_dict:
-                trade_path, trade_size = trade_dict[key]
-                max_size = max(l2q_size, trade_size)
-                paired_files.append((l2q_path, trade_path, max_size))
-                del trade_dict[key]  # Remove matched
-            else:
-                unmatched_l2q.append(l2q_path)
+        # Join on match_key
+        joined = l2q_df.join(trade_df, on="match_key", how="inner", suffix="_trade")
         
-        # Remaining trade files are unmatched
-        unmatched_trade = [trade_path for trade_path, _ in trade_dict.values()]
+        # Extract results
+        paired_files = [
+            (row["path"], row["path_trade"], max(row["size"], row["size_trade"]))
+            for row in joined.to_dicts()
+        ]
+        
+        matched_keys = set(joined["match_key"].to_list())
+        unmatched_l2q = [path for path, _ in l2q_files if extract_key(path) not in matched_keys]
+        unmatched_trade = [path for path, _ in trade_files if extract_key(path) not in matched_keys]
         
         return paired_files, unmatched_l2q, unmatched_trade
     

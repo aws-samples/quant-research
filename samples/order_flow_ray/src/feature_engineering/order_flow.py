@@ -74,7 +74,7 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
         files.sort(key=lambda x: x[1], reverse=(sort_order == 'desc'))
         return files
     
-    def discover_files_asynch(self, data_access, normalized_data_path: str, sort_order: str, parallel_discovery_threshold: int = 100) -> list[tuple[str, int]]:
+    def discover_files_asynch(self, data_access, normalized_data_path: str, sort_order: str, parallel_discovery_threshold: int = 20) -> list[tuple[str, int]]:
         """Discover normalized files using parallel listing.
         
         Args:

@@ -140,7 +140,7 @@ class S3DataAccess(DataAccess):
         results = ray.get(futures)
         return [file for sublist in results for file in sublist]
     
-    def list_files_asynch(self, s3_path: str, parallel_discovery_threshold: int = 100) -> List[Tuple[str, float]]:
+    def list_files_asynch(self, s3_path: str, parallel_discovery_threshold: int = 20) -> List[Tuple[str, float]]:
         """List files with parallel discovery when threshold is reached.
         
         Args:
@@ -160,7 +160,7 @@ class S3DataAccess(DataAccess):
         prefixes = self._discover_prefixes_sequential(bucket, base_prefix, parallel_discovery_threshold)
         return self._list_files_parallel(prefixes)
     
-    def discover_files_asynch(self, s3_path: str, sort_order: str = 'asc', parallel_discovery_threshold: int = 100) -> List[Tuple[str, float]]:
+    def discover_files_asynch(self, s3_path: str, sort_order: str = 'asc', parallel_discovery_threshold: int = 20) -> List[Tuple[str, float]]:
         """Discover files with sorting - convenience wrapper around list_files_asynch.
         
         Args:

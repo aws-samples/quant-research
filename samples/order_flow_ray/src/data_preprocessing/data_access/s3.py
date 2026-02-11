@@ -196,15 +196,34 @@ class S3DataAccess(DataAccess):
         inventory_path = f"{metadata_path.rstrip('/')}/{inventory_name}_input_inventory.csv"
         self.write_csv(df, inventory_path)
         print(f"Wrote inventory to {inventory_path}")
+        
+        # Also write to local /tmp/ as fallback
+        import os
+        local_inventory_path = f"/tmp/{inventory_name}_input_inventory.csv"
+        df.write_csv(local_inventory_path)
+        print(f"Wrote local inventory to {local_inventory_path}")
     
     def read_inventory(self, inventory_name: str, metadata_path: str) -> List[Tuple[str, float]]:
         """Read discovered files from inventory CSV."""
         inventory_path = f"{metadata_path.rstrip('/')}/{inventory_name}_input_inventory.csv"
-        storage_options = self._get_storage_options()
-        df = pl.scan_csv(inventory_path, storage_options=storage_options)
-        files = [(row['file_path'], float(row['file_size'])) for row in df.collect().to_dicts()]
-        print(f"Read {len(files)} files from inventory {inventory_path}")
-        return files
+        try:
+            storage_options = self._get_storage_options()
+            df = pl.scan_csv(inventory_path, storage_options=storage_options)
+            files = [(row['file_path'], float(row['file_size'])) for row in df.collect().to_dicts()]
+            print(f"Read {len(files)} files from inventory {inventory_path}")
+            return files
+        except Exception as e:
+            print(f"S3 inventory read failed: {e}, trying local fallback...")
+            # Fallback to local /tmp/ file
+            local_inventory_path = f"/tmp/{inventory_name}_input_inventory.csv"
+            try:
+                df = pl.scan_csv(local_inventory_path)
+                files = [(row['file_path'], float(row['file_size'])) for row in df.collect().to_dicts()]
+                print(f"Read {len(files)} files from local inventory {local_inventory_path}")
+                return files
+            except Exception as local_e:
+                print(f"Local inventory read also failed: {local_e}")
+                raise e  # Raise original S3 error
     
     def read(self, s3_path: str, **kwargs) -> pl.LazyFrame:
         """Read parquet from S3 path."""

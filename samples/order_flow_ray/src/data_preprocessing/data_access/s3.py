@@ -17,15 +17,7 @@ def _list_prefix_remote(region: str, profile_name: str, s3_path: str) -> List[Tu
     Returns:
         List of (file_path, size_gb) tuples
     """
-    def _get_s3_client_internal():
-        # Reuse the same pattern as _get_s3_client()
-        if profile_name:
-            session = boto3.Session(profile_name=profile_name)
-        else:
-            session = boto3.Session()
-        return session.client('s3', region_name=region)
-    
-    s3_client = _get_s3_client_internal()
+    s3_client = boto3.Session().client('s3',region_name=region)
     
     # Parse s3://bucket/prefix
     path_parts = s3_path[5:].split('/', 1)

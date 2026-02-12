@@ -725,10 +725,12 @@ class Pipeline:
                             output_path = f"{join_loc_dict['namespace']}.{table_name}"
                         else:
                             output_access = data_access
-                            # Create output path based on l2q_path
+                            # Create output path based on l2q_path but replace level2q with l2q_trade_joined
                             _, relative_path = l2q_path.split(join_base.rstrip('/') + '/', 1)
+                            # Replace /level2q/ with /l2q_trade_joined/ in the path
+                            relative_path = relative_path.replace('/level2q/', '/l2q_trade_joined/')
                             output_path = f"{join_loc_dict['path'].rstrip('/')}/{relative_path}"
-                            output_path = output_path.replace('.parquet', f'_joined_{bar_duration_ms}ms.parquet')
+                            output_path = output_path.replace('_features_250ms.parquet', f'_joined_{bar_duration_ms}ms.parquet')
                             output_access.write(joined_features, output_path)
                         
                         row_count = joined_features.select(pl.len()).collect().item()

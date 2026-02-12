@@ -44,8 +44,8 @@ class OrderTradeFeatureJoin:
         all_files = data_access.discover_files_asynch(features_path, sort_order)
         return [(path, size) for path, size in all_files if '/trades/' in path]
     
-    def discover_files(self, data_access, features_path: str, sort_order: str, discovery_mode: str) -> Tuple[List[Tuple[str, str, float]], List[str], List[str], List[Tuple[str, float]]]:
-        """Discover both L2Q and Trade files for pairing.
+    def discover_files(self, data_access, features_path: str, sort_order: str, discovery_mode: str) -> Tuple[List[Tuple[str, float]], List[Tuple[str, float]], List[Tuple[str, float]]]:
+        """Discover both L2Q and Trade files.
         
         Args:
             data_access: Data access instance
@@ -54,7 +54,7 @@ class OrderTradeFeatureJoin:
             discovery_mode: Discovery mode ('asynch' or 'sync')
             
         Returns:
-            Tuple of (paired_files, unmatched_l2q, unmatched_trade, all_files)
+            Tuple of (l2q_files, trade_files, all_files)
         """
         print(f"Discovering L2Q and Trade feature files in: {features_path}")
         
@@ -67,15 +67,7 @@ class OrderTradeFeatureJoin:
         
         print(f"Found {len(l2q_files)} L2Q files and {len(trade_files)} Trade files")
         
-        # Pair files and return all results
-        paired_files, unmatched_l2q, unmatched_trade = self.pair_files(l2q_files, trade_files)
-        
-        if unmatched_l2q:
-            print(f"Warning: {len(unmatched_l2q)} L2Q files without matching Trade files")
-        if unmatched_trade:
-            print(f"Warning: {len(unmatched_trade)} Trade files without matching L2Q files")
-        
-        return paired_files, unmatched_l2q, unmatched_trade, all_files
+        return l2q_files, trade_files, all_files
     
     def pair_files(self, l2q_files: List[Tuple[str, float]], trade_files: List[Tuple[str, float]]) -> Tuple[List[Tuple[str, str, float]], List[str], List[str]]:
         """Pair L2Q and Trade files by path matching.
@@ -133,21 +125,43 @@ class OrderTradeFeatureJoin:
         
         return paired_files, unmatched_l2q, unmatched_trade
     
-    def group_file_pairs_for_processing(self, file_pairs: List[Tuple[str, str, float]]) -> List[List[Tuple[str, str, float]]]:
-        """Group file pairs for processing.
+    def group_file_pairs_for_processing(self, file_pairs: List[Tuple[str, str, float]], target_group_size_gb: float = 10.0) -> List[List[Tuple[str, str, float]]]:
+        """Group file pairs for processing by size balancing.
         
         Args:
-            file_pairs: List of (l2q_path, trade_path, max_size) tuples
+            file_pairs: List of (l2q_path, trade_path, max_size_gb) tuples
+            target_group_size_gb: Target size per group in GB
             
         Returns:
-            List of file pair groups
+            List of file pair groups balanced by size
         """
         if not file_pairs:
             return []
         
-        # Simple grouping - each pair is its own group for now
-        # Can be enhanced later with size-based grouping
-        return [[pair] for pair in file_pairs]
+        # Sort pairs by size (largest first) for better bin packing
+        sorted_pairs = sorted(file_pairs, key=lambda x: x[2], reverse=True)
+        
+        groups = []
+        current_group = []
+        current_size = 0.0
+        
+        for pair in sorted_pairs:
+            pair_size = pair[2]  # max_size_gb
+            
+            # If adding this pair would exceed target, start new group
+            if current_group and current_size + pair_size > target_group_size_gb:
+                groups.append(current_group)
+                current_group = []
+                current_size = 0.0
+            
+            current_group.append(pair)
+            current_size += pair_size
+        
+        # Add final group if not empty
+        if current_group:
+            groups.append(current_group)
+        
+        return groups
     
     def join_features(self, l2q_path: str, trade_path: str, storage_options: dict = None) -> pl.LazyFrame:
         """Join L2Q and Trade features.

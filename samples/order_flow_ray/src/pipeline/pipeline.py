@@ -155,10 +155,15 @@ class Pipeline:
             if self.config.processing.join:
                 print("Running feature join...")
                 input_path = self.config.storage.get_step_input(self.config.processing.join).get_path()
-                paired_files, unmatched_l2q, unmatched_trade, all_files = self.config.processing.join.discover_files(
+                l2q_files, trade_files, all_files = self.config.processing.join.discover_files(
                     self.data_access, input_path, self.config.ray.file_sort_order, 'asynch'
                 )
+                paired_files, unmatched_l2q, unmatched_trade = self.config.processing.join.pair_files(l2q_files, trade_files)
                 print(f"Discovered {len(paired_files)} file pairs for joining")
+                if unmatched_l2q:
+                    print(f"Warning: {len(unmatched_l2q)} L2Q files without matching Trade files")
+                if unmatched_trade:
+                    print(f"Warning: {len(unmatched_trade)} Trade files without matching L2Q files")
                 filtered_pairs = self._apply_filtering(paired_files, files_slice, specific_files)
                 print(f"After filtering: {len(filtered_pairs)} file pairs selected for processing")
                 grouped_pairs = self.config.processing.join.group_file_pairs_for_processing(filtered_pairs)

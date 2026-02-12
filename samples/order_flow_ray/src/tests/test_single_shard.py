@@ -35,7 +35,7 @@ def test_single_shard():
     discovered_files.sort(key=lambda x: x[1], reverse=(sort_order == 'desc'))
     print(f"Found {len(discovered_files)} files")
 
-    specific_files = ['s3://orderflowanalysis/intermediate/repartitioned_v2/2023/01/23/trades/AMERICAS/Z/CHI/XCHI/ARCX/XCHI/trades-XCHI-20230123.parquet',
+    specific_files = ['s3://orderflowanalysis/intermediate/features/2024/12/24/l2q_trade_joined/AMERICAS/E/XCHI-20241224_joined_250ms.parquet',
                       's3://orderflowanalysis/intermediate/normalized/2023/03/13/level2q/AMERICAS/XNAS-20230313.parquet']
     specific_set = set(specific_files)
     filtered_files = [(path, size) for path, size in discovered_files if path in specific_set];filtered_files

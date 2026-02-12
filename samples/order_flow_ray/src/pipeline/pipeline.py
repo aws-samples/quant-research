@@ -709,7 +709,8 @@ class Pipeline:
                         # Read and join features
                         data_access = DataAccessFactory.create('s3', region=region, profile_name=profile)
                         join_eng = OrderTradeFeatureJoin(bar_duration_ms=bar_duration_ms)
-                        joined_features = join_eng.join_features(l2q_path, trade_path)
+                        storage_options = data_access.get_storage_options()
+                        joined_features = join_eng.join_features(l2q_path, trade_path, storage_options)
                         
                         # Write to join location
                         if join_loc_dict['access_type'] == 's3tables':

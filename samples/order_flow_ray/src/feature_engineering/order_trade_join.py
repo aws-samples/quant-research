@@ -149,19 +149,20 @@ class OrderTradeFeatureJoin:
         # Can be enhanced later with size-based grouping
         return [[pair] for pair in file_pairs]
     
-    def join_features(self, l2q_path: str, trade_path: str) -> pl.LazyFrame:
+    def join_features(self, l2q_path: str, trade_path: str, storage_options: dict = None) -> pl.LazyFrame:
         """Join L2Q and Trade features.
         
         Args:
             l2q_path: Path to L2Q features
             trade_path: Path to Trade features
+            storage_options: S3 storage options
             
         Returns:
             Combined features LazyFrame
         """
         # Read both feature files
-        l2q_features = pl.scan_parquet(l2q_path)
-        trade_features = pl.scan_parquet(trade_path)
+        l2q_features = pl.scan_parquet(l2q_path, storage_options=storage_options)
+        trade_features = pl.scan_parquet(trade_path, storage_options=storage_options)
         
         # Join on multiple keys with full outer join
         join_keys = ['bar_id', 'TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC']

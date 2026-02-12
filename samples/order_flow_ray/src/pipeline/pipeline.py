@@ -167,6 +167,7 @@ class Pipeline:
                 filtered_pairs = self._apply_filtering(paired_files, files_slice, specific_files)
                 print(f"After filtering: {len(filtered_pairs)} file pairs selected for processing")
                 grouped_pairs = self.config.processing.join.group_file_pairs_for_processing(filtered_pairs)
+                print(f"Grouped into {len(grouped_pairs)} groups for processing")
                 data = self._join_step(grouped_pairs)
             
             if self.config.processing.training:

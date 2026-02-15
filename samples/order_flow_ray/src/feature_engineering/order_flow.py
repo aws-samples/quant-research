@@ -236,7 +236,7 @@ class L2QFeatureEngineering(FeatureEngineering):
         predicted = slope * x + intercept
         return ((y - predicted) ** 2).mean()
     
-    def _section1_bar_metadata(self, df: pl.LazyFrame) -> List[pl.Expr]:
+    def _section1_bar_metadata(self, df: pl.DataFrame) -> List[pl.Expr]:
         """Section 1: Bar Metadata Features."""
         return [
             pl.col('bar_id_dt').first().alias('bar_id_dt'),
@@ -244,7 +244,7 @@ class L2QFeatureEngineering(FeatureEngineering):
             pl.col('MarketState').all().unique().alias('market_state_mode')
         ]
     
-    def _section2_quote_activity(self, df: pl.LazyFrame, group_keys: List[str], timestamp_col: str) -> List[pl.Expr]:
+    def _section2_quote_activity(self, df: pl.DataFrame, group_keys: List[str], timestamp_col: str) -> List[pl.Expr]:
         """Section 2: Quote Activity Features."""
         features = [
             pl.col(timestamp_col).min().alias('bar_start_dt'),
@@ -277,7 +277,7 @@ class L2QFeatureEngineering(FeatureEngineering):
         
         return features
     
-    def _section3_spread_features(self, df: pl.LazyFrame) -> List[pl.Expr]:
+    def _section3_spread_features(self, df: pl.DataFrame) -> List[pl.Expr]:
         """Section 3: Spread Features."""
         features = []
         
@@ -302,7 +302,7 @@ class L2QFeatureEngineering(FeatureEngineering):
         
         return features
     
-    def _section4_quantity_features(self, df: pl.LazyFrame) -> List[pl.Expr]:
+    def _section4_quantity_features(self, df: pl.DataFrame) -> List[pl.Expr]:
         """Section 4: Quantity Features."""
         features = []
         
@@ -319,7 +319,7 @@ class L2QFeatureEngineering(FeatureEngineering):
         
         return features
     
-    def _section5_volume_features(self, df: pl.LazyFrame) -> List[pl.Expr]:
+    def _section5_volume_features(self, df: pl.DataFrame) -> List[pl.Expr]:
         """Section 5: Volume Features."""
         features = []
         
@@ -338,7 +338,7 @@ class L2QFeatureEngineering(FeatureEngineering):
         
         return features
     
-    def _section6_volatility_features(self, df: pl.LazyFrame) -> List[pl.Expr]:
+    def _section6_volatility_features(self, df: pl.DataFrame) -> List[pl.Expr]:
         """Section 6: Volatility Features."""
         features = []
         
@@ -389,7 +389,7 @@ class L2QFeatureEngineering(FeatureEngineering):
         
         return features
     
-    def _section7_trend_features(self, df: pl.LazyFrame) -> List[pl.Expr]:
+    def _section7_trend_features(self, df: pl.DataFrame, group_keys: List[str], timestamp_col: str) -> List[pl.Expr]:
         """Section 7: Trend Features."""
         features = []
         
@@ -402,43 +402,63 @@ class L2QFeatureEngineering(FeatureEngineering):
             
             # Bid price trend: slope(BidPrice ORDER BY TimestampNanoseconds)
             features.append(
-                self._slope(bid_price).alias(f'bid_price_trend_l{level}')
+                self._slope(bid_price, timestamp_col).over(
+                    partition_by=group_keys,
+                    order_by=pl.col(timestamp_col).sort(descending=False)
+                ).alias(f'bid_price_trend_l{level}')
             )
             
             # Ask price trend: slope(AskPrice ORDER BY TimestampNanoseconds)
             features.append(
-                self._slope(ask_price).alias(f'ask_price_trend_l{level}')
+                self._slope(ask_price, timestamp_col).over(
+                    partition_by=group_keys,
+                    order_by=pl.col(timestamp_col).sort(descending=False)
+                ).alias(f'ask_price_trend_l{level}')
             )
             
             # Mid price trend: slope((BidPrice + AskPrice) / 2 ORDER BY TimestampNanoseconds)
-            # Calculate mid price first, then slope
             features.append(
-                self._slope_mid_price(bid_price, ask_price).alias(f'mid_price_trend_l{level}')
+                self._slope_mid_price(bid_price, ask_price, timestamp_col).over(
+                    partition_by=group_keys,
+                    order_by=pl.col(timestamp_col).sort(descending=False)
+                ).alias(f'mid_price_trend_l{level}')
             )
             
             # Bid quantity trend: slope(BidQuantity ORDER BY TimestampNanoseconds)
             features.append(
-                self._slope(bid_qty).alias(f'bid_quantity_trend_l{level}')
+                self._slope(bid_qty, timestamp_col).over(
+                    partition_by=group_keys,
+                    order_by=pl.col(timestamp_col).sort(descending=False)
+                ).alias(f'bid_quantity_trend_l{level}')
             )
             
             # Ask quantity trend: slope(AskQuantity ORDER BY TimestampNanoseconds)
             features.append(
-                self._slope(ask_qty).alias(f'ask_quantity_trend_l{level}')
+                self._slope(ask_qty, timestamp_col).over(
+                    partition_by=group_keys,
+                    order_by=pl.col(timestamp_col).sort(descending=False)
+                ).alias(f'ask_quantity_trend_l{level}')
             )
             
             # Bid volume trend: slope(BidPrice * BidQuantity ORDER BY TimestampNanoseconds)
             features.append(
-                self._slope_product(bid_price, bid_qty).alias(f'bid_volume_trend_l{level}')
+                self._slope_product(bid_price, bid_qty, timestamp_col).over(
+                    partition_by=group_keys,
+                    order_by=pl.col(timestamp_col).sort(descending=False)
+                ).alias(f'bid_volume_trend_l{level}')
             )
             
             # Ask volume trend: slope(AskPrice * AskQuantity ORDER BY TimestampNanoseconds)
             features.append(
-                self._slope_product(ask_price, ask_qty).alias(f'ask_volume_trend_l{level}')
+                self._slope_product(ask_price, ask_qty, timestamp_col).over(
+                    partition_by=group_keys,
+                    order_by=pl.col(timestamp_col).sort(descending=False)
+                ).alias(f'ask_volume_trend_l{level}')
             )
         
         return features
     
-    def _section8_trend_vol_features(self, df: pl.LazyFrame) -> List[pl.Expr]:
+    def _section8_trend_vol_features(self, df: pl.DataFrame) -> List[pl.Expr]:
         """Section 8: Trend Vol Features."""
         features = []
         
@@ -571,14 +591,16 @@ class L2QFeatureEngineering(FeatureEngineering):
             'section4': self._section4_quantity_features(df),
             'section5': self._section5_volume_features(df),
             'section6': self._section6_volatility_features(df),
-            'section7': self._section7_trend_features(df),
+            'section7': self._section7_trend_features(df, self._get_group_keys(), self._get_timestamp_col()),
             'section8': self._section8_trend_vol_features(df)
         }
         
         if max_section is not None:
             pipeline = {k: v for k, v in all_sections.items() if int(k.replace('section', '')) <= max_section}
+            print(f"Running sections 1-{max_section} only (max_section={max_section})")
         else:
             pipeline = all_sections
+            print(f"Running all sections 1-8 (max_section=None)")
         
         # Start with first section as base
         first_section = list(pipeline.keys())[0]

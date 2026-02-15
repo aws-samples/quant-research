@@ -241,7 +241,8 @@ class L2QFeatureEngineering(FeatureEngineering):
         return [
             pl.col('bar_id_dt').first().alias('bar_id_dt'),
             pl.col('bar_duration_ms').first().alias('bar_duration_ms'),
-            pl.col('MarketState').all().unique().alias('market_state_mode')
+            pl.col('MarketState').implode().list.unique().list.join(',').alias('market_state_mode'),
+            pl.col('MarketState').n_unique().alias('market_state_count')
         ]
     
     def _section2_quote_activity(self, df: pl.DataFrame, group_keys: List[str], timestamp_col: str) -> List[pl.Expr]:

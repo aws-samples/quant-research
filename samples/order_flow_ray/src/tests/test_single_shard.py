@@ -56,14 +56,14 @@ def test_single_shard():
         print(f"  {file_path}")
     
     # Apply feature engineering to first file in group
-    test_file = specific_files[0]#first_group[0][0]  # Extract file path from tuple
+    test_file = 's3://orderflowanalysis/intermediate/normalized/2023/03/13/level2q/AMERICAS/XNAS-20230313.parquet'#specific_files[0]#first_group[0][0]  # Extract file path from tuple
     print(f"\nProcessing file: {test_file}")
     
     try:
         # Read normalized data
         print("Reading normalized data...")
         df = data_access.read(test_file)
-        #df = df.filter(pl.col('Ticker') == 'SPY')
+        df = df.filter(pl.col('Ticker') == 'SPY').collect()
         #df = df.sort(['TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker', 'TimestampNanoseconds'])
 
         print(f"Data columns: {df.columns}")

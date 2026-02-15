@@ -546,7 +546,7 @@ class L2QFeatureEngineering(FeatureEngineering):
         predicted = slope * x + intercept
         return ((y - predicted) ** 2).mean()
     
-    def feature_computation(self, data: pl.LazyFrame, max_section: int | None) -> pl.LazyFrame:
+    def feature_computation(self, data: pl.LazyFrame, max_section: int | None) -> pl.DataFrame:
         """L2Q feature computation pipeline."""
         # Add bar_id and bar_id_dt
         df = TimeBarFeatureEngineering.bar_time_addition(data, 'TimestampNanoseconds', self.bar_duration_ms)
@@ -592,8 +592,7 @@ class L2QFeatureEngineering(FeatureEngineering):
         
         print(f"All sections complete: {len(pipeline)} sections, {result.width - len(self._get_group_keys())} total features")
         
-        # Return as LazyFrame for API compatibility
-        return result.lazy()
+        return result
     
     def failure_extraction(self, results: List[Any]) -> List[Any]:
         """Failed L2Q item extraction."""

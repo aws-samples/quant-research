@@ -219,10 +219,13 @@ class S3DataAccess(DataAccess):
         storage_options = self._get_storage_options()
         return pl.scan_parquet(s3_path, storage_options=storage_options, **kwargs)
     
-    def write(self, data: pl.LazyFrame, s3_path: str, **kwargs) -> None:
+    def write(self, data: pl.LazyFrame | pl.DataFrame, s3_path: str, **kwargs) -> None:
         """Write parquet to S3 path."""
         storage_options = self._get_storage_options()
-        data.sink_parquet(s3_path, storage_options=storage_options, **kwargs)
+        if isinstance(data, pl.LazyFrame):
+            data.sink_parquet(s3_path, storage_options=storage_options, **kwargs)
+        else:
+            data.write_parquet(s3_path, storage_options=storage_options, **kwargs)
     
     def write_csv(self, data: pl.DataFrame, s3_path: str) -> None:
         """Write CSV to S3 path."""

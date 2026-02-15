@@ -605,8 +605,8 @@ class TradeFeatureEngineering(FeatureEngineering):
         return ['Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker','TradeDate', 'bar_id']+['OPOL', 'ExecutionVenue']
 
     def _get_timestamp_col(self) -> str:
-        """Get timestamp column name for L2Q data."""
-        return 'TimestampNanoseconds'
+        """Get timestamp column name for Trade data."""
+        return 'TradeTimestampNanoseconds'
 
     def feature_computation(self, data: pl.LazyFrame) -> pl.LazyFrame:
         """Trade feature computation with bar aggregation."""

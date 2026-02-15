@@ -193,6 +193,10 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
 class L2QFeatureEngineering(FeatureEngineering):
     """Feature engineering for Level 2 Quote data."""
     
+    def _get_group_keys(self) -> List[str]:
+        """Get standard grouping keys for L2Q feature aggregation."""
+        return ['bar_id', 'TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker']
+    
     def _slope(self, y_col: str, x_col: str = 'TimestampNanoseconds') -> pl.Expr:
         """Calculate slope using linear regression."""
         # Convert nanoseconds to seconds for numerical stability
@@ -233,80 +237,43 @@ class L2QFeatureEngineering(FeatureEngineering):
         return [
             pl.col('bar_id_dt').first().alias('bar_id_dt'),
             pl.col('bar_duration_ms').first().alias('bar_duration_ms'),
-            pl.col('MarketState').mode().first().alias('market_state_mode')
+            pl.col('MarketState').all().unique().alias('market_state_mode')
         ]
     
-    def _section2_quote_activity(self, df: pl.LazyFrame) -> List[pl.Expr]:
+    def _section2_quote_activity(self, df: pl.LazyFrame, group_keys: List[str]) -> List[pl.Expr]:
         """Section 2: Quote Activity Features."""
-        return [
-            pl.col('TimestampNanoseconds').min().alias('bar_start_dt'),
-            pl.col('TimestampNanoseconds').max().alias('bar_end_dt'),
-            pl.col('TimestampNanoseconds').count().alias('quote_count'),
-            
-            # Bid update counts (levels 1-10): price_change + quantity_change + orders_change
-            ((pl.col('BidPrice1') != pl.col('BidPrice1').shift(1)).cast(pl.Int32) + 
-             (pl.col('BidQuantity1') != pl.col('BidQuantity1').shift(1)).cast(pl.Int32) + 
-             (pl.col('BidNumOrders1') != pl.col('BidNumOrders1').shift(1)).cast(pl.Int32)).sum().alias('bid_update_count_l1'),
-            ((pl.col('BidPrice2') != pl.col('BidPrice2').shift(1)).cast(pl.Int32) + 
-             (pl.col('BidQuantity2') != pl.col('BidQuantity2').shift(1)).cast(pl.Int32) + 
-             (pl.col('BidNumOrders2') != pl.col('BidNumOrders2').shift(1)).cast(pl.Int32)).sum().alias('bid_update_count_l2'),
-            ((pl.col('BidPrice3') != pl.col('BidPrice3').shift(1)).cast(pl.Int32) + 
-             (pl.col('BidQuantity3') != pl.col('BidQuantity3').shift(1)).cast(pl.Int32) + 
-             (pl.col('BidNumOrders3') != pl.col('BidNumOrders3').shift(1)).cast(pl.Int32)).sum().alias('bid_update_count_l3'),
-            ((pl.col('BidPrice4') != pl.col('BidPrice4').shift(1)).cast(pl.Int32) + 
-             (pl.col('BidQuantity4') != pl.col('BidQuantity4').shift(1)).cast(pl.Int32) + 
-             (pl.col('BidNumOrders4') != pl.col('BidNumOrders4').shift(1)).cast(pl.Int32)).sum().alias('bid_update_count_l4'),
-            ((pl.col('BidPrice5') != pl.col('BidPrice5').shift(1)).cast(pl.Int32) + 
-             (pl.col('BidQuantity5') != pl.col('BidQuantity5').shift(1)).cast(pl.Int32) + 
-             (pl.col('BidNumOrders5') != pl.col('BidNumOrders5').shift(1)).cast(pl.Int32)).sum().alias('bid_update_count_l5'),
-            ((pl.col('BidPrice6') != pl.col('BidPrice6').shift(1)).cast(pl.Int32) + 
-             (pl.col('BidQuantity6') != pl.col('BidQuantity6').shift(1)).cast(pl.Int32) + 
-             (pl.col('BidNumOrders6') != pl.col('BidNumOrders6').shift(1)).cast(pl.Int32)).sum().alias('bid_update_count_l6'),
-            ((pl.col('BidPrice7') != pl.col('BidPrice7').shift(1)).cast(pl.Int32) + 
-             (pl.col('BidQuantity7') != pl.col('BidQuantity7').shift(1)).cast(pl.Int32) + 
-             (pl.col('BidNumOrders7') != pl.col('BidNumOrders7').shift(1)).cast(pl.Int32)).sum().alias('bid_update_count_l7'),
-            ((pl.col('BidPrice8') != pl.col('BidPrice8').shift(1)).cast(pl.Int32) + 
-             (pl.col('BidQuantity8') != pl.col('BidQuantity8').shift(1)).cast(pl.Int32) + 
-             (pl.col('BidNumOrders8') != pl.col('BidNumOrders8').shift(1)).cast(pl.Int32)).sum().alias('bid_update_count_l8'),
-            ((pl.col('BidPrice9') != pl.col('BidPrice9').shift(1)).cast(pl.Int32) + 
-             (pl.col('BidQuantity9') != pl.col('BidQuantity9').shift(1)).cast(pl.Int32) + 
-             (pl.col('BidNumOrders9') != pl.col('BidNumOrders9').shift(1)).cast(pl.Int32)).sum().alias('bid_update_count_l9'),
-            ((pl.col('BidPrice10') != pl.col('BidPrice10').shift(1)).cast(pl.Int32) + 
-             (pl.col('BidQuantity10') != pl.col('BidQuantity10').shift(1)).cast(pl.Int32) + 
-             (pl.col('BidNumOrders10') != pl.col('BidNumOrders10').shift(1)).cast(pl.Int32)).sum().alias('bid_update_count_l10'),
-            
-            # Ask update counts (levels 1-10): price_change + quantity_change + orders_change
-            ((pl.col('AskPrice1') != pl.col('AskPrice1').shift(1)).cast(pl.Int32) + 
-             (pl.col('AskQuantity1') != pl.col('AskQuantity1').shift(1)).cast(pl.Int32) + 
-             (pl.col('AskNumOrders1') != pl.col('AskNumOrders1').shift(1)).cast(pl.Int32)).sum().alias('ask_update_count_l1'),
-            ((pl.col('AskPrice2') != pl.col('AskPrice2').shift(1)).cast(pl.Int32) + 
-             (pl.col('AskQuantity2') != pl.col('AskQuantity2').shift(1)).cast(pl.Int32) + 
-             (pl.col('AskNumOrders2') != pl.col('AskNumOrders2').shift(1)).cast(pl.Int32)).sum().alias('ask_update_count_l2'),
-            ((pl.col('AskPrice3') != pl.col('AskPrice3').shift(1)).cast(pl.Int32) + 
-             (pl.col('AskQuantity3') != pl.col('AskQuantity3').shift(1)).cast(pl.Int32) + 
-             (pl.col('AskNumOrders3') != pl.col('AskNumOrders3').shift(1)).cast(pl.Int32)).sum().alias('ask_update_count_l3'),
-            ((pl.col('AskPrice4') != pl.col('AskPrice4').shift(1)).cast(pl.Int32) + 
-             (pl.col('AskQuantity4') != pl.col('AskQuantity4').shift(1)).cast(pl.Int32) + 
-             (pl.col('AskNumOrders4') != pl.col('AskNumOrders4').shift(1)).cast(pl.Int32)).sum().alias('ask_update_count_l4'),
-            ((pl.col('AskPrice5') != pl.col('AskPrice5').shift(1)).cast(pl.Int32) + 
-             (pl.col('AskQuantity5') != pl.col('AskQuantity5').shift(1)).cast(pl.Int32) + 
-             (pl.col('AskNumOrders5') != pl.col('AskNumOrders5').shift(1)).cast(pl.Int32)).sum().alias('ask_update_count_l5'),
-            ((pl.col('AskPrice6') != pl.col('AskPrice6').shift(1)).cast(pl.Int32) + 
-             (pl.col('AskQuantity6') != pl.col('AskQuantity6').shift(1)).cast(pl.Int32) + 
-             (pl.col('AskNumOrders6') != pl.col('AskNumOrders6').shift(1)).cast(pl.Int32)).sum().alias('ask_update_count_l6'),
-            ((pl.col('AskPrice7') != pl.col('AskPrice7').shift(1)).cast(pl.Int32) + 
-             (pl.col('AskQuantity7') != pl.col('AskQuantity7').shift(1)).cast(pl.Int32) + 
-             (pl.col('AskNumOrders7') != pl.col('AskNumOrders7').shift(1)).cast(pl.Int32)).sum().alias('ask_update_count_l7'),
-            ((pl.col('AskPrice8') != pl.col('AskPrice8').shift(1)).cast(pl.Int32) + 
-             (pl.col('AskQuantity8') != pl.col('AskQuantity8').shift(1)).cast(pl.Int32) + 
-             (pl.col('AskNumOrders8') != pl.col('AskNumOrders8').shift(1)).cast(pl.Int32)).sum().alias('ask_update_count_l8'),
-            ((pl.col('AskPrice9') != pl.col('AskPrice9').shift(1)).cast(pl.Int32) + 
-             (pl.col('AskQuantity9') != pl.col('AskQuantity9').shift(1)).cast(pl.Int32) + 
-             (pl.col('AskNumOrders9') != pl.col('AskNumOrders9').shift(1)).cast(pl.Int32)).sum().alias('ask_update_count_l9'),
-            ((pl.col('AskPrice10') != pl.col('AskPrice10').shift(1)).cast(pl.Int32) + 
-             (pl.col('AskQuantity10') != pl.col('AskQuantity10').shift(1)).cast(pl.Int32) + 
-             (pl.col('AskNumOrders10') != pl.col('AskNumOrders10').shift(1)).cast(pl.Int32)).sum().alias('ask_update_count_l10')
+        timestamp_col = 'TimestampNanoseconds'
+        
+        features = [
+            pl.col(timestamp_col).min().alias('bar_start_dt'),
+            pl.col(timestamp_col).max().alias('bar_end_dt'),
+            pl.col(timestamp_col).count().alias('quote_count')
         ]
+        
+        # Define shift operation with proper windowing
+        def shift_with_window(col_name: str) -> pl.Expr:
+            return pl.col(col_name).shift(1).over(
+                partition_by=group_keys,
+                order_by=pl.col(timestamp_col).sort(descending=False)
+            )
+        
+        # Update counts for levels 1-10
+        for level in range(1, 11):
+            # Bid update count: price_change + quantity_change + orders_change
+            features.append(
+                ((pl.col(f'BidPrice{level}') != shift_with_window(f'BidPrice{level}')).cast(pl.Int32) + 
+                 (pl.col(f'BidQuantity{level}') != shift_with_window(f'BidQuantity{level}')).cast(pl.Int32) + 
+                 (pl.col(f'BidNumOrders{level}') != shift_with_window(f'BidNumOrders{level}')).cast(pl.Int32)).sum().alias(f'bid_update_count_l{level}')
+            )
+            
+            # Ask update count: price_change + quantity_change + orders_change
+            features.append(
+                ((pl.col(f'AskPrice{level}') != shift_with_window(f'AskPrice{level}')).cast(pl.Int32) + 
+                 (pl.col(f'AskQuantity{level}') != shift_with_window(f'AskQuantity{level}')).cast(pl.Int32) + 
+                 (pl.col(f'AskNumOrders{level}') != shift_with_window(f'AskNumOrders{level}')).cast(pl.Int32)).sum().alias(f'ask_update_count_l{level}')
+            )
+        
+        return features
     
     def _section3_spread_features(self, df: pl.LazyFrame) -> List[pl.Expr]:
         """Section 3: Spread Features."""
@@ -597,7 +564,7 @@ class L2QFeatureEngineering(FeatureEngineering):
         # Build feature pipeline
         all_sections = {
             'section1': self._section1_bar_metadata(df),
-            'section2': self._section2_quote_activity(df),
+            'section2': self._section2_quote_activity(df, group_keys),
             'section3': self._section3_spread_features(df),
             'section4': self._section4_quantity_features(df),
             'section5': self._section5_volume_features(df),
@@ -612,7 +579,7 @@ class L2QFeatureEngineering(FeatureEngineering):
             pipeline = all_sections
         
         # Calculate sections separately and join results
-        group_keys = ['bar_id', 'TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker']
+        group_keys = self._get_group_keys()
         
         # Start with first section as base
         first_section = list(pipeline.keys())[0]

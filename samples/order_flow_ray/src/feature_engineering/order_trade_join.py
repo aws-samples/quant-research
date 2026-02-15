@@ -6,15 +6,13 @@ import polars as pl
 class OrderTradeFeatureJoin:
     """Join L2Q and Trade features into unified dataset."""
     
-    def __init__(self, bar_duration_ms: int = 250, max_retries: int = 3):
+    def __init__(self, bar_duration_ms: int = 250):
         """Initialize feature join.
         
         Args:
             bar_duration_ms: Bar duration in milliseconds
-            max_retries: Maximum retry attempts
         """
         self.bar_duration_ms = bar_duration_ms
-        self.max_retries = max_retries
     
     def discover_l2q_files(self, data_access, features_path: str, sort_order: str) -> List[Tuple[str, float]]:
         """Discover L2Q feature files.

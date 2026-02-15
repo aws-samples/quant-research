@@ -147,7 +147,7 @@ class RayConfig:
     memory_multiplier: float = 2.0
     memory_per_core_gb: float = 4.0
     cpu_buffer: int = 1
-    max_retries: int = 3
+    max_retries: int = 1
     file_sort_order: str = 'asc'
     pending_tasks_cpu_multiplier: float = 1.1
     flat_core_count: int | None = 5

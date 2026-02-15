@@ -243,7 +243,7 @@ class Pipeline:
         Returns:
             Step results
         """
-        max_retries = getattr(step_instance, 'max_retries', 3)
+        max_retries = getattr(step_instance, 'max_retries', self.config.ray.max_retries)
         all_results = []
         remaining_data = data
         original_count = len(data)
@@ -482,7 +482,7 @@ class Pipeline:
                         output_path_base = f"{repart_loc_dict['path'].rstrip('/')}/{'/'.join(path_parts[:-1])}"
                         
                         # Repartition and write - returns list of result dicts
-                        repart = Repartition(max_retries=max_retries, log_interval=log_interval)
+                        repart = Repartition(max_retries=self.config.ray.max_retries, log_interval=log_interval)
                         partition_results = repart.repartition(df, fp, data_access, output_path_base)
                         
                         # Add common fields to each result

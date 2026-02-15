@@ -8,17 +8,15 @@ from .base import TimeBarFeatureEngineering
 class FeatureEngineering(ABC):
     """Base class for feature engineering with configurable bar aggregation."""
     
-    def __init__(self, bar_duration_ms: int = 1000, max_retries: int = 3, group_filter: list[str] | None = None, max_section: int | None = None):
+    def __init__(self, bar_duration_ms: int = 1000, group_filter: list[str] | None = None, max_section: int | None = None):
         """Feature engineering initialization.
         
         Args:
             bar_duration_ms: Bar duration in milliseconds
-            max_retries: Maximum retry attempts
             group_filter: Optional list of filter formulas for group selection
             max_section: Maximum section to run (None for all sections)
         """
         self.bar_duration_ms = bar_duration_ms
-        self.max_retries = max_retries
         self.group_filter = group_filter or []
         self.max_section = max_section
     
@@ -49,10 +47,10 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
             Features dataframe
         """
         if data_type == 'level2q':
-            l2q_eng = L2QFeatureEngineering(self.bar_duration_ms, self.max_retries)
+            l2q_eng = L2QFeatureEngineering(self.bar_duration_ms)
             return l2q_eng.feature_computation(data, self.max_section)
         else:
-            trade_eng = TradeFeatureEngineering(self.bar_duration_ms, self.max_retries)
+            trade_eng = TradeFeatureEngineering(self.bar_duration_ms)
             return trade_eng.feature_computation(data)
     
     def discover_files(self, data_access, normalized_data_path: str, sort_order: str, discovery_mode: str) -> list[tuple[str, int]]:

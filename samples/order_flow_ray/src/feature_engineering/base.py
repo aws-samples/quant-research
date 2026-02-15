@@ -7,19 +7,17 @@ import polars as pl
 class TimeBarFeatureEngineering:
     """Base class for feature engineering with configurable bar aggregation."""
     
-    def __init__(self, raw_data: pl.LazyFrame, bar_duration_ms: int, timestamp_col: str, max_retries: int = 3):
+    def __init__(self, raw_data: pl.LazyFrame, bar_duration_ms: int, timestamp_col: str):
         """Bar feature engineering initialization.
         
         Args:
             raw_data: Input dataframe
             bar_duration_ms: Bar duration in milliseconds
             timestamp_col: Name of timestamp column (nanoseconds)
-            max_retries: Maximum retry attempts
         """
         self.raw_data = self.bar_time_addition(raw_data, timestamp_col, bar_duration_ms)
         self.bar_duration_ms = bar_duration_ms
         self.timestamp_col = timestamp_col
-        self.max_retries = max_retries
     
     @staticmethod
     def bar_time_addition(data: pl.LazyFrame, timestamp_col: str, bar_duration_ms: int) -> pl.LazyFrame:

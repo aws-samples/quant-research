@@ -592,7 +592,8 @@ class L2QFeatureEngineering(FeatureEngineering):
         
         print(f"All sections complete: {len(pipeline)} sections, {result.width - len(self._get_group_keys())} total features")
         
-        return result
+        cols = sorted(result.columns)
+        return result.select(cols).sort(self._get_group_keys())
     
     def failure_extraction(self, results: List[Any]) -> List[Any]:
         """Failed L2Q item extraction."""
@@ -668,6 +669,9 @@ class TradeFeatureEngineering(FeatureEngineering):
             (pl.col('unassigned_volume') / pl.col('total_volume')).alias('unassigned_volume_ratio'),
             (pl.col('unassigned_count') / pl.col('total_trades')).alias('unassigned_count_ratio')
         ])
+        
+        cols = sorted(result.columns)
+        return result.select(cols).sort(self._get_group_keys())
     
     def failure_extraction(self, results: List[Any]) -> List[Any]:
         """Failed trade item extraction."""

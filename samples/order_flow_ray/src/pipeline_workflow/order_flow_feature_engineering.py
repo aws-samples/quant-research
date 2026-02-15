@@ -13,7 +13,7 @@ def main():
     BAR_DURATION_MS = 250
     
     # Build configuration
-    config = PipelineConfig(
+    config_recon = PipelineConfig(
         region='us-east-1',
         data=DataConfig(
             raw_data_path='s3://orderflowanalysis/intermediate/normalized',
@@ -43,18 +43,20 @@ def main():
         ray=RayConfig(runtime_env={}, flat_core_count=170)
     )
     
-    # Run pipeline
-    pipeline = Pipeline(config)
-    results = pipeline.run()  # Process all discovered files
+    print("Testing Feature Engineering Pipeline...")
+    pipeline_recon = Pipeline(config_recon)
+    
+    # Run all files
+    results_recon = pipeline_recon.run()  # Process all discovered files
     
     # Display results
     print("\n" + "=" * 80)
     print("Feature Engineering Pipeline Results")
     print("=" * 80)
-    print(f"Total files processed: {len(results)}")
+    print(f"Total files processed: {len(results_recon)}")
     
-    successful = [r for r in results if r.get('message', 'success') == 'success']
-    failed = [r for r in results if r.get('message', 'success') != 'success']
+    successful = [r for r in results_recon if r.get('message', 'success') == 'success']
+    failed = [r for r in results_recon if r.get('message', 'success') != 'success']
     
     print(f"Successful: {len(successful)}")
     print(f"Failed: {len(failed)}")

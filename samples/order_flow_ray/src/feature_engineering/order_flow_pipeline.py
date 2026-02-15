@@ -152,7 +152,10 @@ class OrderFlowFeatureEngineering:
                         data_access.write(features_df, output_path)
                         
                         # Get row count
-                        row_count = features_df.select(pl.len()).collect().item()
+                        if isinstance(features_df, pl.LazyFrame):
+                            row_count = features_df.select(pl.len()).collect().item()
+                        else:
+                            row_count = features_df.select(pl.len()).item()
                         
                         results.append({
                             'group_key': gk,

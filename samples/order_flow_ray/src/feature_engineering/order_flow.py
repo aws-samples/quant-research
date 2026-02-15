@@ -581,7 +581,7 @@ class L2QFeatureEngineering(FeatureEngineering):
         
         # Start with first section as base
         first_section = list(pipeline.keys())[0]
-        result = df.group_by(self._get_group_keys()).agg(pipeline[first_section])
+        result = df.group_by(self._get_group_keys(),maintain_order= True).agg(pipeline[first_section])
         print(f"Completed {first_section}: {len(pipeline[first_section])} features")
         
         # Add remaining sections incrementally
@@ -602,11 +602,19 @@ class L2QFeatureEngineering(FeatureEngineering):
 
 class TradeFeatureEngineering(FeatureEngineering):
     """Feature engineering for Trade data."""
-    
+    def _get_group_keys(self) -> List[str]:
+        """Get standard grouping keys for L2Q feature aggregation."""
+        return ['Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker','TradeDate', 'bar_id']+['OPOL', 'ExecutionVenue']
+
+    def _get_timestamp_col(self) -> str:
+        """Get timestamp column name for L2Q data."""
+        return 'TimestampNanoseconds'
+
     def feature_computation(self, data: pl.LazyFrame) -> pl.LazyFrame:
         """Trade feature computation with bar aggregation."""
         # Add bar_id and side_sign
         df = TimeBarFeatureEngineering.bar_time_addition(data, 'TradeTimestampNanoseconds', self.bar_duration_ms)
+        df = df.sort( self._get_group_keys()+[self._get_timestamp_col()])
         df = df.with_columns([
             pl.when(pl.col('AggressorSide') == 1).then(1)
               .when(pl.col('AggressorSide') == 2).then(-1)
@@ -614,7 +622,7 @@ class TradeFeatureEngineering(FeatureEngineering):
         ])
         
         # Group by bar and compute trade features
-        return df.group_by(['bar_id', 'TradeDate', 'ExchangeTicker', 'Ticker', 'ISOExchangeCode', 'MIC', 'OPOL', 'ExecutionVenue']).agg([
+        return df.group_by(self._get_group_keys(),maintain_order= True).agg([
             # Bar datetime (preserve from bar_id_dt)
             pl.col('bar_id_dt').first().alias('bar_id_dt'),
             # Bar duration (preserve from bar_duration_ms)

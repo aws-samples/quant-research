@@ -611,7 +611,10 @@ class Pipeline:
                         
                         print(f"Write complete: {file_path} -> {output_path}")
                         
-                        row_count = features.select(pl.len()).collect().item()
+                        if isinstance(features, pl.LazyFrame):
+                            row_count = features.select(pl.len()).collect().item()
+                        else:
+                            row_count = features.select(pl.len()).item()
                         
                         # Get output file size
                         if features_loc_dict['access_type'] == 's3tables':
@@ -740,7 +743,10 @@ class Pipeline:
                             output_path = output_path.replace('_features_250ms.parquet', f'_joined_{bar_duration_ms}ms.parquet')
                             output_access.write(joined_features, output_path)
                         
-                        row_count = joined_features.select(pl.len()).collect().item()
+                        if isinstance(joined_features, pl.LazyFrame):
+                            row_count = joined_features.select(pl.len()).collect().item()
+                        else:
+                            row_count = joined_features.select(pl.len()).item()
                         
                         # Get output file size
                         if join_loc_dict['access_type'] == 's3tables':

@@ -197,6 +197,10 @@ class L2QFeatureEngineering(FeatureEngineering):
         """Get standard grouping keys for L2Q feature aggregation."""
         return ['bar_id', 'TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker']
     
+    def _get_timestamp_col(self) -> str:
+        """Get timestamp column name for L2Q data."""
+        return 'TimestampNanoseconds'
+    
     def _slope(self, y_col: str, x_col: str = 'TimestampNanoseconds') -> pl.Expr:
         """Calculate slope using linear regression."""
         # Convert nanoseconds to seconds for numerical stability
@@ -240,10 +244,8 @@ class L2QFeatureEngineering(FeatureEngineering):
             pl.col('MarketState').all().unique().alias('market_state_mode')
         ]
     
-    def _section2_quote_activity(self, df: pl.LazyFrame, group_keys: List[str]) -> List[pl.Expr]:
+    def _section2_quote_activity(self, df: pl.LazyFrame, group_keys: List[str], timestamp_col: str) -> List[pl.Expr]:
         """Section 2: Quote Activity Features."""
-        timestamp_col = 'TimestampNanoseconds'
-        
         features = [
             pl.col(timestamp_col).min().alias('bar_start_dt'),
             pl.col(timestamp_col).max().alias('bar_end_dt'),
@@ -564,7 +566,7 @@ class L2QFeatureEngineering(FeatureEngineering):
         # Build feature pipeline
         all_sections = {
             'section1': self._section1_bar_metadata(df),
-            'section2': self._section2_quote_activity(df, group_keys),
+            'section2': self._section2_quote_activity(df, self._get_group_keys(), self._get_timestamp_col()),
             'section3': self._section3_spread_features(df),
             'section4': self._section4_quantity_features(df),
             'section5': self._section5_volume_features(df),
@@ -578,18 +580,15 @@ class L2QFeatureEngineering(FeatureEngineering):
         else:
             pipeline = all_sections
         
-        # Calculate sections separately and join results
-        group_keys = self._get_group_keys()
-        
         # Start with first section as base
         first_section = list(pipeline.keys())[0]
-        result = df.group_by(group_keys).agg(pipeline[first_section])
+        result = df.group_by(self._get_group_keys()).agg(pipeline[first_section])
         print(f"Completed {first_section}: {len(pipeline[first_section])} features")
         
         # Add remaining sections incrementally
         for section_name, section_features in list(pipeline.items())[1:]:
-            section_result = df.group_by(group_keys).agg(section_features)
-            result = result.join(section_result, on=group_keys, how='inner')
+            section_result = df.group_by(self._get_group_keys()).agg(section_features)
+            result = result.join(section_result, on=self._get_group_keys(), how='inner')
             print(f"Completed {section_name}: {len(section_features)} features")
         
         print(f"All sections complete: {len(pipeline)} sections, {result.width - len(group_keys)} total features")

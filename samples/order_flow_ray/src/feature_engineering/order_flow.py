@@ -195,7 +195,7 @@ class L2QFeatureEngineering(FeatureEngineering):
     
     def _get_group_keys(self) -> List[str]:
         """Get standard grouping keys for L2Q feature aggregation."""
-        return ['bar_id', 'TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker']
+        return ['Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker','TradeDate', 'bar_id']
     
     def _get_timestamp_col(self) -> str:
         """Get timestamp column name for L2Q data."""
@@ -241,7 +241,7 @@ class L2QFeatureEngineering(FeatureEngineering):
         return [
             pl.col('bar_id_dt').first().alias('bar_id_dt'),
             pl.col('bar_duration_ms').first().alias('bar_duration_ms'),
-            pl.col('MarketState').implode().list.unique().list.join(',').alias('market_state_mode'),
+            pl.col('MarketState').unique().alias('market_state_mode'),
             pl.col('MarketState').n_unique().alias('market_state_count')
         ]
     
@@ -255,10 +255,7 @@ class L2QFeatureEngineering(FeatureEngineering):
         
         # Define shift operation with proper windowing
         def shift_with_window(col_name: str) -> pl.Expr:
-            return pl.col(col_name).shift(1).over(
-                partition_by=group_keys,
-                order_by=pl.col(timestamp_col).sort(descending=False)
-            )
+            return pl.col(col_name).shift(1) #.over(partition_by=group_keys,order_by=pl.col(timestamp_col).sort(descending=False))
         
         # Update counts for levels 1-10
         for level in range(1, 11):
@@ -403,58 +400,37 @@ class L2QFeatureEngineering(FeatureEngineering):
             
             # Bid price trend: slope(BidPrice ORDER BY TimestampNanoseconds)
             features.append(
-                self._slope(bid_price, timestamp_col).over(
-                    partition_by=group_keys,
-                    order_by=pl.col(timestamp_col).sort(descending=False)
-                ).alias(f'bid_price_trend_l{level}')
+                self._slope(bid_price, timestamp_col).alias(f'bid_price_trend_l{level}')
             )
             
             # Ask price trend: slope(AskPrice ORDER BY TimestampNanoseconds)
             features.append(
-                self._slope(ask_price, timestamp_col).over(
-                    partition_by=group_keys,
-                    order_by=pl.col(timestamp_col).sort(descending=False)
-                ).alias(f'ask_price_trend_l{level}')
+                self._slope(ask_price, timestamp_col).alias(f'ask_price_trend_l{level}')
             )
             
             # Mid price trend: slope((BidPrice + AskPrice) / 2 ORDER BY TimestampNanoseconds)
             features.append(
-                self._slope_mid_price(bid_price, ask_price, timestamp_col).over(
-                    partition_by=group_keys,
-                    order_by=pl.col(timestamp_col).sort(descending=False)
-                ).alias(f'mid_price_trend_l{level}')
+                self._slope_mid_price(bid_price, ask_price, timestamp_col).alias(f'mid_price_trend_l{level}')
             )
             
             # Bid quantity trend: slope(BidQuantity ORDER BY TimestampNanoseconds)
             features.append(
-                self._slope(bid_qty, timestamp_col).over(
-                    partition_by=group_keys,
-                    order_by=pl.col(timestamp_col).sort(descending=False)
-                ).alias(f'bid_quantity_trend_l{level}')
+                self._slope(bid_qty, timestamp_col).alias(f'bid_quantity_trend_l{level}')
             )
             
             # Ask quantity trend: slope(AskQuantity ORDER BY TimestampNanoseconds)
             features.append(
-                self._slope(ask_qty, timestamp_col).over(
-                    partition_by=group_keys,
-                    order_by=pl.col(timestamp_col).sort(descending=False)
-                ).alias(f'ask_quantity_trend_l{level}')
+                self._slope(ask_qty, timestamp_col).alias(f'ask_quantity_trend_l{level}')
             )
             
             # Bid volume trend: slope(BidPrice * BidQuantity ORDER BY TimestampNanoseconds)
             features.append(
-                self._slope_product(bid_price, bid_qty, timestamp_col).over(
-                    partition_by=group_keys,
-                    order_by=pl.col(timestamp_col).sort(descending=False)
-                ).alias(f'bid_volume_trend_l{level}')
+                self._slope_product(bid_price, bid_qty, timestamp_col).alias(f'bid_volume_trend_l{level}')
             )
             
             # Ask volume trend: slope(AskPrice * AskQuantity ORDER BY TimestampNanoseconds)
             features.append(
-                self._slope_product(ask_price, ask_qty, timestamp_col).over(
-                    partition_by=group_keys,
-                    order_by=pl.col(timestamp_col).sort(descending=False)
-                ).alias(f'ask_volume_trend_l{level}')
+                self._slope_product(ask_price, ask_qty, timestamp_col).alias(f'ask_volume_trend_l{level}')
             )
         
         return features
@@ -576,7 +552,7 @@ class L2QFeatureEngineering(FeatureEngineering):
         df = TimeBarFeatureEngineering.bar_time_addition(data, 'TimestampNanoseconds', self.bar_duration_ms)
         
         # Sort by grouping keys and timestamp to ensure proper shift() order, then materialize
-        df = df.sort(['TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC', 'ExchangeTicker', 'TimestampNanoseconds']).collect()
+        df = df.sort( self._get_group_keys()+[self._get_timestamp_col()]).collect()
         
         # Log materialization info
         memory_mb = df.estimated_size('mb')
@@ -610,11 +586,11 @@ class L2QFeatureEngineering(FeatureEngineering):
         
         # Add remaining sections incrementally
         for section_name, section_features in list(pipeline.items())[1:]:
-            section_result = df.group_by(self._get_group_keys()).agg(section_features)
+            section_result = df.group_by(self._get_group_keys(),maintain_order= True).agg(section_features)
             result = result.join(section_result, on=self._get_group_keys(), how='inner')
             print(f"Completed {section_name}: {len(section_features)} features")
         
-        print(f"All sections complete: {len(pipeline)} sections, {result.width - len(group_keys)} total features")
+        print(f"All sections complete: {len(pipeline)} sections, {result.width - len(self._get_group_keys())} total features")
         
         # Return as LazyFrame for API compatibility
         return result.lazy()

@@ -172,12 +172,34 @@ class OrderTradeFeatureJoin:
         Returns:
             Combined features LazyFrame
         """
+        def report_duplicate_columns(columns):
+            """Report duplicate columns after join."""
+            base_cols = [col.replace('_trade', '') for col in columns if col.endswith('_trade')]
+            duplicates = [(col, f"{col}_trade") for col in base_cols if col in columns]
+            if duplicates:
+                print(f"Duplicate columns found: {duplicates}")
+            return duplicates
+        
+        def merge_duplicate_columns(df, duplicates):
+            """Merge duplicate columns, filling nulls from _trade columns."""
+            for base_col, trade_col in duplicates:
+                df = df.with_columns(
+                    pl.coalesce([pl.col(base_col), pl.col(trade_col)]).alias(base_col)
+                )#.drop(trade_col)
+            return df
+        
         # Read both feature files
         l2q_features = pl.scan_parquet(l2q_path, storage_options=storage_options)
         trade_features = pl.scan_parquet(trade_path, storage_options=storage_options)
         
+        # Define column groups to avoid duplication
+        base_partition_cols = ['Ticker', 'ISOExchangeCode', 'MIC', 'TradeDate']
+        time_column = 'bar_id'
+        join_keys = base_partition_cols + [time_column]
+        partition_cols = base_partition_cols + ['OPOL', 'ExecutionVenue']
+        sort_cols = partition_cols + [time_column]
+        
         # Join on multiple keys with full outer join
-        join_keys = ['bar_id', 'TradeDate', 'Ticker', 'ISOExchangeCode', 'MIC']
         joined = l2q_features.join(
             trade_features,
             on=join_keys,
@@ -185,10 +207,21 @@ class OrderTradeFeatureJoin:
             suffix='_trade'
         )
         
-        # Sort by bar_id and forward fill partitioned by ticker, MIC, ISOExchangeCode
-        return joined.sort('bar_id').with_columns([
-            pl.all().forward_fill().over(['Ticker', 'MIC', 'ISOExchangeCode'])
+        # Report duplicate columns
+        duplicates = report_duplicate_columns(joined.collect_schema().names())
+        
+        # Merge duplicate columns
+        if duplicates:
+            joined = merge_duplicate_columns(joined, duplicates)
+        
+        # Forward fill partitioned by ticker, MIC, ISOExchangeCode
+        joined = joined.with_columns([
+            pl.all().forward_fill().over(partition_cols, order_by=pl.col(time_column).sort(descending=False))
         ])
+        
+        # Sort columns for consistent output
+        cols = sorted(joined.columns)
+        return joined.select(cols).sort(sort_cols)
     
     def get_failed_items(self, results: List[dict]) -> List[List[Tuple[str, str, float]]]:
         """Extract failed file pairs for retry.

@@ -176,8 +176,8 @@ class OrderTradeFeatureJoin:
             """Report duplicate columns after join."""
             base_cols = [col.replace('_trade', '') for col in columns if col.endswith('_trade')]
             duplicates = [(col, f"{col}_trade") for col in base_cols if col in columns]
-            if duplicates:
-                print(f"Duplicate columns found: {duplicates}")
+            # if duplicates:
+            #     print(f"Duplicate columns found: {duplicates}")
             return duplicates
         
         def merge_duplicate_columns(df, duplicates):
@@ -185,7 +185,7 @@ class OrderTradeFeatureJoin:
             for base_col, trade_col in duplicates:
                 df = df.with_columns(
                     pl.coalesce([pl.col(base_col), pl.col(trade_col)]).alias(base_col)
-                )#.drop(trade_col)
+                ).drop(trade_col)
             return df
         
         # Read both feature files

@@ -1,8 +1,0 @@
-# Ray Cluster Configuration
-# Set your Ray cluster address here
-
-# For Anyscale workspace, use format: ray://<workspace-url>:10001
-# For local cluster, use: ray://localhost:10001
-# For auto-discovery, use: auto
-
-RAY_ADDRESS=auto

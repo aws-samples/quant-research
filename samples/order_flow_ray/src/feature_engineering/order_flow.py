@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
 """Feature engineering with bar aggregation."""
 from abc import ABC, abstractmethod
 from typing import Any, List
@@ -171,14 +174,20 @@ class OrderFlowFeatureEngineering(FeatureEngineering):
             file_count = group[0][2]  # 3rd element from first tuple
             total_size = sum(file_size for _, file_size, _ in group)
             
-            # Check all formulas
+            # Check all formulas using safe evaluation
             passes_all = True
+            safe_vars = {"file_count": file_count, "total_size": total_size, "len": len, "group": group}
             for formula in formulas:
                 try:
-                    if not eval(formula, {"file_count": file_count, "total_size": total_size, "len": len, "group": group}):
+                    compiled = compile(formula, "<formula>", "eval")
+                    # Restrict to only allowed names
+                    if not all(name in safe_vars for name in compiled.co_names):
                         passes_all = False
                         break
-                except:
+                    if not eval(compiled, {"__builtins__": {}}, safe_vars):  # nosec B307
+                        passes_all = False
+                        break
+                except Exception:
                     passes_all = False  # Invalid formula fails
                     break
             

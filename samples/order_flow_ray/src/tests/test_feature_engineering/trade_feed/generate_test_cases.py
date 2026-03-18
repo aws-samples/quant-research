@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
 """Extract specific ticker/timeframe data and generate expected aggregation results."""
 import os
 import sys

@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
 """Pipeline orchestrator for Ray-based BMLL processing."""
 import os
 import ray

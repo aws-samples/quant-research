@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
+
 import sys
 import os
 sys.path.append('/Users/blitvin/IdeaProjects/quant-research-sample-using-amazon-ecs-and-aws-batch/samples/order_flow_ray/src')

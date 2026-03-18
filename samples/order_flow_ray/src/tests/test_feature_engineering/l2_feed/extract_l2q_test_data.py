@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
 """Extract raw L2Q data for selected high-activity periods and save as CSV."""
 import os
 import sys

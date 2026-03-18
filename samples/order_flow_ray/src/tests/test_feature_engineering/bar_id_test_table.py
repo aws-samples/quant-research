@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
 """Generate test tables for bar_id calculation with multiple bar durations."""
 import polars as pl
 import os

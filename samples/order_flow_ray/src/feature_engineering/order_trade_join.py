@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
 """Feature join for L2Q and Trade features."""
 from typing import List, Tuple
 import polars as pl

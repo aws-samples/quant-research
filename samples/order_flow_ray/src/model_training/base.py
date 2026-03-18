@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
 """Base class for model trainers."""
 from abc import ABC, abstractmethod
 from typing import Any, List

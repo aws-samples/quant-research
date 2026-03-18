@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
 """Find 250ms periods with highest L2Q activity across multiple tickers during market hours."""
 import os
 import sys

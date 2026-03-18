@@ -142,7 +142,7 @@ class S3Stack(Stack):
         Build and validate S3 bucket name.
 
         Args:
-            bucket_type (str): Type of bucket ('standard' or 'XXXXXXX')
+            bucket_type (str): Type of bucket ('standard' or 'express')
 
         Returns:
             str: Valid S3 bucket name with truncated namespace if needed

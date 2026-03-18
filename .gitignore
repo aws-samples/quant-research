@@ -16,3 +16,12 @@ cdk.context.json
 
 # IDEs
 .idea/
+# OS files
+.DS_Store
+
+# Excel files
+*.xlsm
+~$*
+
+# Jupyter
+.ipynb_checkpoints

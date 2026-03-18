@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
 """Utility functions for Chronos training data preparation."""
 import polars as pl
 import numpy as np

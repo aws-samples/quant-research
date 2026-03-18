@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
 """Reconciliation step for validating data consistency between normalized and repartitioned data."""
 from typing import List, Tuple, Any
 import polars as pl

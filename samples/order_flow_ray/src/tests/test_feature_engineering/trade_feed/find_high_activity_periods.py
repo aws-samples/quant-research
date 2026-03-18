@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
 """Find 5-minute periods with highest trade activity per exchange per symbol."""
 import os
 import sys

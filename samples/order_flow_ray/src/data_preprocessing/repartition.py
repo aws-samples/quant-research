@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
 """Repartition step for reorganizing data by partition key."""
 from typing import List, Any, Tuple
 import polars as pl

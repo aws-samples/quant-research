@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
 """Chronos2 time series forecasting trainer with full pretraining."""
 from typing import Any, List, Dict, Optional
 import polars as pl

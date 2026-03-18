@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
 """Pipeline configuration classes."""
 from dataclasses import dataclass
 from typing import Any

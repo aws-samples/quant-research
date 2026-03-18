@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
 """Standalone Chronos-2 training pipeline for L2Q order book data.
 
 Loads Level 2 Quote data from S3, engineers features, and trains

@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
 *.swp
 package-lock.json
 __pycache__
@@ -9,3 +12,16 @@ __pycache__
 # CDK asset staging directory
 .cdk.staging
 cdk.out
+cdk.context.json
+
+# IDEs
+.idea/
+# OS files
+.DS_Store
+
+# Excel files
+*.xlsm
+~$*
+
+# Jupyter
+.ipynb_checkpoints

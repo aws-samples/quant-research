@@ -1,0 +1,81 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
+"""Run data repartition pipeline."""
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from pipeline.config import PipelineConfig, DataConfig, ProcessingConfig, StorageConfig, RayConfig, S3Location
+from pipeline.pipeline import Pipeline
+from data_preprocessing.repartition import Repartition
+
+
+def main():
+    # Get source directory for Ray runtime
+    src_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Get specific files from command line argument (optional)
+    specific_files = None
+    if len(sys.argv) > 1:
+        specific_files = sys.argv[1].split(',')
+        print(f"Processing specific files: {specific_files}")
+    else:
+        print("Processing all discovered files")
+    
+    # Build configuration
+    config = PipelineConfig(
+        region='us-east-1',
+        data=DataConfig(
+            raw_data_path='s3://orderflowanalysis/intermediate/normalized',
+            start_date='2024-05-03',
+            end_date='2024-05-03',
+            exchanges=['AMERICAS'],
+            data_types=['trades']
+        ),
+        processing=ProcessingConfig(
+            repartition=Repartition(max_retries=3, log_interval=1)
+        ),
+        storage=StorageConfig(
+            raw_data=S3Location(path='s3://orderflowanalysis/intermediate/normalized'),
+            normalized=S3Location(path='s3://orderflowanalysis/intermediate/normalized'),
+            repartitioned=S3Location(path='s3://orderflowanalysis/intermediate/repartitioned_v3'),
+            reconciliation=S3Location(path='s3://orderflowanalysis/intermediate/reconciliation'),
+            features=S3Location(path='s3://orderflowanalysis/intermediate/features'),
+            models=S3Location(path='s3://orderflowanalysis/output/models'),
+            predictions=S3Location(path='s3://orderflowanalysis/output/predictions'),
+            backtest=S3Location(path='s3://orderflowanalysis/output/backtest')
+        ),
+        ray=RayConfig(runtime_env={}, flat_core_count=17)
+    )
+    
+    # Run pipeline
+    pipeline = Pipeline(config)
+    results = pipeline.run(files_slice=slice(50))
+    
+    # Display results
+    print("\nRepartition Pipeline Results:")
+    print(f"Processed {len(results)} partitions")
+    
+    successful = [r for r in results if r.get('message', 'success') == 'success']
+    failed = [r for r in results if r.get('message', 'success') != 'success']
+    
+    print(f"Successful: {len(successful)}")
+    print(f"Failed: {len(failed)}")
+    
+    if successful:
+        print("\nSample successful partitions:")
+        for result in successful[:5]:
+            partition_value = result.get('partition_value', 'N/A')
+            row_count = result.get('row_count', 0)
+            output_path = result.get('output_path', 'N/A')
+            print(f"  [{partition_value}]: {row_count:,} rows -> {output_path}")
+    
+    if failed:
+        print("\nFailed partitions:")
+        for result in failed[:5]:
+            print(f"  {result.get('input_path', 'N/A')}: {result.get('message', 'Unknown error')[:100]}")
+
+
+if __name__ == "__main__":
+    main()

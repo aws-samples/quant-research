@@ -1,0 +1,10 @@
+# bandit.yaml
+
+# Exclude test directories and virtual environments
+exclude_dirs:
+  - "tests"
+  - "test"
+  - ".venv"
+  - "venv"
+  - ".pytest_cache"
+

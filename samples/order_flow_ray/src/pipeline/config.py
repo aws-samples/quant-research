@@ -1,0 +1,203 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
+"""Pipeline configuration classes."""
+from dataclasses import dataclass
+from typing import Any
+from abc import ABC, abstractmethod
+from data_preprocessing.data_normalization import BMLLNormalizer
+from data_preprocessing.repartition import Repartition
+from data_preprocessing.reconciliation import Reconciliation
+from feature_engineering.order_flow import OrderFlowFeatureEngineering
+from feature_engineering.order_trade_join import OrderTradeFeatureJoin
+
+
+class StorageLocation(ABC):
+    """Base class for storage location configuration."""
+    
+    @abstractmethod
+    def get_access_type(self) -> str:
+        """Return access type ('s3' or 's3tables')."""
+        pass
+    
+    @abstractmethod
+    def get_path(self) -> str:
+        """Return storage path."""
+        pass
+
+
+@dataclass(frozen=True)
+class S3Location(StorageLocation):
+    """S3 storage location.
+    
+    Args:
+        path: S3 path (e.g., 's3://bucket/path')
+    """
+    path: str
+    
+    def get_access_type(self) -> str:
+        return 's3'
+    
+    def get_path(self) -> str:
+        return self.path
+
+
+@dataclass(frozen=True)
+class S3TablesLocation(StorageLocation):
+    """S3 Tables storage location.
+    
+    Args:
+        table_name: Table name
+        table_bucket_arn: S3 Tables bucket ARN
+        namespace: Table namespace
+    """
+    table_name: str
+    table_bucket_arn: str
+    namespace: str
+    
+    def get_access_type(self) -> str:
+        return 's3tables'
+    
+    def get_path(self) -> str:
+        return self.table_name
+
+
+@dataclass(frozen=True)
+class DataConfig:
+    """Data source configuration.
+    
+    Args:
+        raw_data_path: S3 path to raw BMLL data
+        start_date: ISO format date string (YYYY-MM-DD)
+        end_date: ISO format date string (YYYY-MM-DD)
+        exchanges: List of exchange codes (e.g., ["XNAS", "XNYS"])
+        data_types: List of data types (e.g., ["trades", "level2q"])
+    """
+    raw_data_path: str
+    start_date: str
+    end_date: str
+    exchanges: list[str]
+    data_types: list[str]
+
+
+@dataclass(frozen=True)
+class StorageConfig:
+    """Storage configuration with granular access control.
+    
+    Args:
+        raw_data: Input data location
+        normalized: Normalized data location
+        repartitioned: Repartitioned data location
+        reconciliation: Reconciliation reports location
+        features: Feature data location
+        models: Model storage location
+        predictions: Predictions storage location
+        backtest: Backtest results location
+        metadata: Metadata and inventory files location
+    """
+    raw_data: StorageLocation
+    normalized: StorageLocation
+    repartitioned: StorageLocation
+    reconciliation: StorageLocation
+    features: StorageLocation
+    models: StorageLocation
+    predictions: StorageLocation
+    backtest: StorageLocation
+    metadata: StorageLocation
+    
+    def get_step_input_output(self, step_instance) -> tuple[StorageLocation, StorageLocation]:
+        """Return (input_location, output_location) for a given step instance."""
+        if isinstance(step_instance, BMLLNormalizer):
+            return (self.raw_data, self.normalized)
+        elif isinstance(step_instance, Repartition):
+            return (self.normalized, self.repartitioned)
+        elif isinstance(step_instance, Reconciliation):
+            return (self.normalized, self.reconciliation)
+        elif isinstance(step_instance, OrderFlowFeatureEngineering):
+            return (self.repartitioned, self.features)
+        elif isinstance(step_instance, OrderTradeFeatureJoin):
+            return (self.features, self.features)
+        else:
+            raise ValueError(f"Unknown step type: {type(step_instance)}")
+    
+    def get_step_input(self, step_instance) -> StorageLocation:
+        """Return input location for a given step instance."""
+        return self.get_step_input_output(step_instance)[0]
+    
+    def get_step_output(self, step_instance) -> StorageLocation:
+        """Return output location for a given step instance."""
+        return self.get_step_input_output(step_instance)[1]
+
+
+@dataclass(frozen=True)
+class RayConfig:
+    """Ray runtime configuration.
+    
+    Args:
+        runtime_env: Ray runtime environment dict
+        resources: Optional resource requirements per task
+        memory_multiplier: Multiplier for file size to estimate memory (default 3.0)
+        memory_per_core_gb: Memory per core in GB (default 2.0)
+        cpu_buffer: Additional CPUs to add to calculated requirement (default 1)
+        max_retries: Maximum retry attempts for failed shards (default 3)
+        file_sort_order: Sort order for files - 'asc' or 'desc' (default 'asc')
+        pending_tasks_cpu_multiplier: Multiplier for available CPUs to calculate max pending tasks (default 1.1 = 110%)
+        flat_core_count: Fixed core count for all tasks, overrides dynamic calculation if set (default 5)
+        skip_runtime_env: Skip setting runtime_env in ray.init() (default False, set True for job submission)
+    """
+    runtime_env: dict[str, Any]
+    resources: dict[str, Any] | None = None
+    memory_multiplier: float = 2.0
+    memory_per_core_gb: float = 4.0
+    cpu_buffer: int = 1
+    max_retries: int = 0
+    file_sort_order: str = 'asc'
+    pending_tasks_cpu_multiplier: float = 1.1
+    flat_core_count: int | None = 5
+    skip_runtime_env: bool = False
+
+
+@dataclass
+class ProcessingConfig:
+    """Processing steps configuration.
+    
+    Each step is an executable instance or None to skip.
+    
+    Args:
+        normalization: Normalizer instance or None
+        repartition: Repartition instance or None
+        reconciliation: Reconciliation instance or None
+        feature_engineering: FeatureEngineer instance or None
+        join: OrderTradeFeatureJoin instance or None
+        training: Trainer instance or None
+        inference: Predictor instance or None
+        backtest: Backtester instance or None
+    """
+    normalization: Any | None = None
+    repartition: Any | None = None
+    reconciliation: Any | None = None
+    feature_engineering: Any | None = None
+    join: Any | None = None
+    training: Any | None = None
+    inference: Any | None = None
+    backtest: Any | None = None
+
+
+@dataclass
+class PipelineConfig:
+    """Top-level pipeline configuration.
+    
+    Args:
+        region: AWS region
+        data: Data source configuration
+        processing: Processing steps configuration
+        storage: Storage paths configuration
+        ray: Ray runtime configuration
+        profile_name: AWS profile name (optional)
+    """
+    region: str
+    data: DataConfig
+    processing: ProcessingConfig
+    storage: StorageConfig
+    ray: RayConfig
+    profile_name: str | None = None

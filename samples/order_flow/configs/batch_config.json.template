@@ -1,0 +1,32 @@
+{
+  "data": {
+    "metadata_location": "s3://your-data-bucket/sample/metadata/your-metadata-file.metadata.json",
+    "feature_cols": ["trade_price", "trade_quantity", "bid_price", "ask_price", "bid_quantity", "ask_quantity"],
+    "region": "us-east-1",
+    "lookback_period": 128,
+    "lookforward_period": 10,
+    "buy_sell_threshold": 2,
+    "sequence_length": 128,
+    "apply_undersampling": true,
+    "undersampling_strategy": "minority_match",
+    "start_date": "2023-04-10",
+    "end_date": "2023-04-11",
+    "instrument_filter": "72089"
+  },
+  "s3": {
+    "bucket_name": "${NAMESPACE}-standard-bucket-${AWS_REGION}",
+    "prefix": "ml-pipeline",
+    "region": "${AWS_REGION}"
+  },
+  "training": {
+    "batch_size": 256,
+    "total_epochs": 10,
+    "learning_rate": 0.001,
+    "local_datasets_dir": "/tmp/datasets",
+    "local_model_save_dir": "/tmp/models"
+  },
+  "model": {
+    "hidden_size": 128,
+    "num_layers": 2
+  }
+}

@@ -1,0 +1,26 @@
+name: "Python CodeQL Configuration"
+
+disable-default-queries: false
+
+queries:
+  - uses: security-and-quality
+
+paths:
+  - infrastructure/
+  - samples/order_flow/
+  - "**/*.py"
+
+paths-ignore:
+  - "**/__pycache__/**"
+  - "**/node_modules/**"
+  - "**/.venv/**"
+  - "**/venv/**"
+  - "**/.git/**"
+  - "**/build/**"
+  - "**/dist/**"
+  - "**/*.pyc"
+  - "**/cdk.out/**"
+
+packs:
+  - codeql/python-queries
+

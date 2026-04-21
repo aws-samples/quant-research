@@ -5,6 +5,7 @@ Below is a collection of Quant Research projects
 1.  [Quant Research using Amazon EMR and AWS EKS](https://github.com/aws-samples/sample-quant-research-using-amazon-emr-and-aws-eks)   
 2.  [Quant Research using Amazon ECS and AWS Batch](https://github.com/aws-samples/quant-research-sample-using-amazon-ecs-and-aws-batch)
 3.  [AWS Batch Runtime Monitoring](https://github.com/aws-samples/aws-batch-runtime-monitoring)
+4.  [Inference using AWS Batch and Amazon Bedrock](https://github.com/aws-samples/sample-inference-using-aws-batch)
 
 # Security
 

@@ -7,3 +7,6 @@
 [submodule "aws-batch-runtime-monitoring"]
 	path = aws-batch-runtime-monitoring
 	url = https://github.com/aws-samples/aws-batch-runtime-monitoring.git
+[submodule "inference-using-aws-batch-and-amazon-bedrock"]
+	path = inference-using-aws-batch-and-amazon-bedrock
+	url = https://github.com/aws-samples/sample-inference-using-aws-batch

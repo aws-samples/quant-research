@@ -12,7 +12,7 @@
   4.  [Inference using AWS Batch and Amazon Bedrock](https://github.com/aws-samples/sample-inference-using-aws-batch) — Parallel inference on AWS
   Batch using Amazon Bedrock models
 
-  For quant research examples using OpenGRIS, check our
+  For quant research examples, check our
   [samples](https://github.com/aws-samples/quant-research-sample-using-amazon-ecs-and-aws-batch/tree/main/samples)
   directory.
   

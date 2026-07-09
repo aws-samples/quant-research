@@ -41,13 +41,3 @@
   # License
 
   This library is licensed under the MIT-0 License. See the [LICENSE](./LICENSE) file.
-  What changed and why:
-
-  - Intro line now uses your "Infrastructure as Code deployable stacks" framing and names the audience (quant/HPC workloads) — this is what makes
-  the OpenGRIS section belong here rather than read as an ad.
-  - List numbering fixed (yours had 1, 3, 4, 5) and each entry got a short description pulled from the actual sub-repo descriptions, so the hub is
-  useful at a glance.
-  - New "OpenGRIS on AWS" section is the positioning statement almost verbatim, followed by a three-step "route workloads to AWS" path. The steps
-  recast two existing stacks (Batch + monitoring) as the OpenGRIS on-ramp — how-to content for infrastructure that lives right here, which is the
-  frame most likely to survive aws-samples review.
-  - FINOS is linked explicitly as the trust signal for the fin-serv audience.
